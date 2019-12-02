@@ -1,2 +1,22 @@
-<!DOCTYPE RCC>
-<RCC version="1.0"/>
+<RCC>
+    <qresource prefix="/icons">
+        <file>icons/appicon.png</file>
+        <file>icons/script.png</file>
+        <file>images/doc-open.png</file>
+        <file>images/file-open.png</file>
+        <file>images/file-save.png</file>
+        <file>toolsicon/ellipse.png</file>
+        <file>toolsicon/line.png</file>
+        <file>toolsicon/pencil.png</file>
+        <file>toolsicon/pencolor.png</file>
+        <file>toolsicon/polygon.png</file>
+        <file>icons/canvas.png</file>
+        <file>toolsicon/pencil2.png</file>
+        <file>toolsicon/fillpolygon.png</file>
+        <file>toolsicon/fill.png</file>
+        <file>toolsicon/bezier.png</file>
+        <file>transicon/rotate.png</file>
+        <file>transicon/scale.png</file>
+        <file>transicon/translate.png</file>
+    </qresource>
+</RCC>

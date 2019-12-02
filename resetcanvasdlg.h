@@ -17,6 +17,12 @@ public:
 
 private:
     Ui::ResetCanvasDlg *ui;
+
+public:
+    int getlen();
+    int getwid();
+    void setlen(int);
+    void setwid(int);
 };
 
 #endif // RESETCANVASDLG_H

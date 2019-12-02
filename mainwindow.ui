@@ -13,10 +13,109 @@
   <property name="windowTitle">
    <string>MainWindow</string>
   </property>
-  <widget class="QWidget" name="centralwidget"/>
-  <widget class="QMenuBar" name="menubar"/>
+  <widget class="QWidget" name="centralwidget">
+   <widget class="Canvas" name="canvas" native="true">
+    <property name="geometry">
+     <rect>
+      <x>0</x>
+      <y>0</y>
+      <width>591</width>
+      <height>431</height>
+     </rect>
+    </property>
+   </widget>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>800</width>
+     <height>21</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menu_File">
+    <property name="title">
+     <string>文件(&amp;F)</string>
+    </property>
+    <addaction name="separator"/>
+    <addaction name="impscript"/>
+    <addaction name="openpic"/>
+    <addaction name="savepic"/>
+   </widget>
+   <widget class="QMenu" name="menu_About">
+    <property name="title">
+     <string>关于...(&amp;A)</string>
+    </property>
+   </widget>
+   <widget class="QMenu" name="menu_Edit">
+    <property name="title">
+     <string>编辑(&amp;E)</string>
+    </property>
+    <widget class="QMenu" name="menu">
+     <property name="title">
+      <string>线段绘制算法</string>
+     </property>
+     <addaction name="separator"/>
+     <addaction name="actionDDA"/>
+     <addaction name="actionBresenham"/>
+    </widget>
+    <addaction name="resetcanvas"/>
+    <addaction name="menu"/>
+   </widget>
+   <addaction name="menu_File"/>
+   <addaction name="menu_Edit"/>
+   <addaction name="menu_About"/>
+  </widget>
   <widget class="QStatusBar" name="statusbar"/>
+  <action name="impscript">
+   <property name="text">
+    <string>导入脚本</string>
+   </property>
+  </action>
+  <action name="openpic">
+   <property name="icon">
+    <iconset>
+     <normaloff>images/file-open.png</normaloff>images/file-open.png</iconset>
+   </property>
+   <property name="text">
+    <string>打开图片</string>
+   </property>
+  </action>
+  <action name="createCanvas">
+   <property name="text">
+    <string>重置画布</string>
+   </property>
+  </action>
+  <action name="resetcanvas">
+   <property name="text">
+    <string>重置画布</string>
+   </property>
+  </action>
+  <action name="savepic">
+   <property name="text">
+    <string>保存图片</string>
+   </property>
+  </action>
+  <action name="actionDDA">
+   <property name="text">
+    <string>DDA</string>
+   </property>
+  </action>
+  <action name="actionBresenham">
+   <property name="text">
+    <string>Bresenham</string>
+   </property>
+  </action>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>Canvas</class>
+   <extends>QWidget</extends>
+   <header>canvas.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>
