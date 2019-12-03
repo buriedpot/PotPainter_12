@@ -25,6 +25,8 @@ Canvas::Canvas(QWidget *parent) : QWidget(parent)
     this->isPolygonDrawDone = true;
     this->isBezierDrawDone = true;
     this->needtoUpdate = false;
+    Transforming = -1;
+    isTransforming = false;
     /*Initialization of pixmap*/
     this->pixmap = QPixmap(size());
     this->pixmap.fill(Qt::white);
@@ -86,15 +88,22 @@ void Canvas::paintEvent(QPaintEvent *event) {
     else {
         if (!pixmapdrawDone) { //Pixmap还未绘制结束
             if (this->graphClass == LINE) {
+                emit settransEnabled(1);
+                x00 = sx; y00 = sy; ddx = ex - sx; ddy = ey - sy;
+                transmap = pixmap;
                 if (this->lineClass == DDALINE)
                     this->DDADrawLine(&pixmap, sx, sy, ex, ey);
                 else
                     this->BREDrawLine(&pixmap, sx, sy, ex, ey);
             }
             else if (this->graphClass == ELLIPSE) {
+                emit settransEnabled(1);
+                x00 = sx; y00 = sy; ddx = ex - sx; ddy = ey - sy;
+                transmap = pixmap;
                 this->BREDrawEllipse(&pixmap, (sx + ex) / 2, (sy + ey) / 2, w / 2, h / 2);
             }
             else if (this->graphClass == PENCIL) {
+                transmap = pixmap;
                 this->BREDrawLine(&pixmap, lastendPoint.x(), lastendPoint.y(), endPoint.x(), endPoint.y());
                 updateSuccess = true;
             }            
@@ -109,6 +118,9 @@ void Canvas::paintEvent(QPaintEvent *event) {
                             else {
                                 this->BREDrawPolygon(&polygonmap, v);
                             }
+                            emit settransEnabled(1);
+                            transmap = pixmap;
+                            transplg = v;
                             pixmap = polygonmap;
                             prePlgpnt = endPoint;//多边形已作出的上一个顶点赋值为目前的顶点
                             v.clear();
@@ -118,6 +130,9 @@ void Canvas::paintEvent(QPaintEvent *event) {
                         else {
                             //qDebug() << "end = first" << endl;
                             ETFillPolygon(&polygonmap, v);
+                            emit settransEnabled(1);
+                            transplg = v;
+                            transmap = pixmap;
                             pixmap = polygonmap;
                             v.clear();
                             prePlgpnt = endPoint;//多边形已作出的上一个顶点赋值为目前的顶点
@@ -153,6 +168,9 @@ void Canvas::paintEvent(QPaintEvent *event) {
                     }
                     if (endPoint == firstPoint){
                         BezierDrawCurve(&beziermap, vb);
+                        emit settransEnabled(1);
+                        transpoints = vb;
+                        transmap = pixmap;
                         pixmap = beziermap;
                         vb.clear();
                         isBezierDrawDone = true;
@@ -171,6 +189,89 @@ void Canvas::paintEvent(QPaintEvent *event) {
             pixmapdrawDone = true;
             isSaved = false;
         }
+        if (Transforming != -1) {
+            if (isTransforming){
+                QPixmap tmptransmap = transmap;
+                if (Transforming == TRANSLATE) {
+                    if (graphClass == LINE) {
+                        if (lineClass == DDALINE)
+                            this->DDADrawLine(&tmptransmap, endPoint.x() - startPoint.x() + x00, endPoint.y() - startPoint.y() + y00,
+                                              endPoint.x() - startPoint.x() + x00 + ddx, endPoint.y() - startPoint.y() + y00 + ddy);
+                        else
+                            this->BREDrawLine(&tmptransmap, endPoint.x() - startPoint.x() + x00, endPoint.y() - startPoint.y() + y00,
+                                  endPoint.x() - startPoint.x() + x00 + ddx, endPoint.y() - startPoint.y() + y00 + ddy);
+                    }
+                    else if (graphClass == ELLIPSE) {
+                        this->BREDrawEllipse(&tmptransmap, (endPoint.x() - startPoint.x() + x00) + ddx / 2, endPoint.y() - startPoint.y() + y00 +ddy/2,
+                                             abs(ddx / 2), abs(ddy / 2));
+                    }
+                    else if (graphClass == BEZIER) {
+                        vector<Point> tmppoints(transpoints.size());
+                        for (int i = 0; i < transpoints.size(); ++i) {
+                            tmppoints[i].xp = transpoints[i].xp + endPoint.x() - startPoint.x();
+                            tmppoints[i].yp = transpoints[i].yp + endPoint.y() - startPoint.y();
+                        }
+                        this->BezierDrawCurve(&tmptransmap, tmppoints);
+                    }
+                    else if (graphClass == POLYGON || graphClass == FILLPOLYGON) {
+                        vector<QPoint> tmppoints(transplg.size());
+                        for (int i = 0; i < transplg.size(); ++i) {
+                            tmppoints[i].setX(transplg[i].x() + endPoint.x() - startPoint.x());
+                            tmppoints[i].setY(transplg[i].y() + endPoint.y() - startPoint.y());
+                        }
+                        if (graphClass == POLYGON) {
+                            if (lineClass == DDALINE) DDADrawPolygon(&tmptransmap, tmppoints);
+                            else BREDrawPolygon(&tmptransmap, tmppoints);
+                        }
+                        else {
+                            ETFillPolygon(&tmptransmap, tmppoints);
+                        }
+                    }
+                }
+                painter.drawPixmap(0,0,tmptransmap);
+                return;
+            }
+            else {
+                pixmap = transmap;
+                if (Transforming == TRANSLATE) {
+                    if (graphClass == LINE) {
+                        if (lineClass == DDALINE)
+                            this->DDADrawLine(&pixmap, endPoint.x() - startPoint.x() + x00, endPoint.y() - startPoint.y() + y00,
+                                          endPoint.x() - startPoint.x() + x00 + ddx, endPoint.y() - startPoint.y() + y00 + ddy);
+                        else
+                            this->BREDrawLine(&pixmap, endPoint.x() - startPoint.x() + x00, endPoint.y() - startPoint.y() + y00,
+                                      endPoint.x() - startPoint.x() + x00 + ddx, endPoint.y() - startPoint.y() + y00 + ddy);
+                        x00 = endPoint.x() - startPoint.x() + x00; y00 = endPoint.y() - startPoint.y() + y00;
+                    }
+                    else if (graphClass == ELLIPSE) {
+                        this->BREDrawEllipse(&pixmap, (endPoint.x() - startPoint.x() + x00) + ddx / 2, endPoint.y() - startPoint.y() + y00 +ddy/2,
+                                             abs(ddx / 2), abs(ddy / 2));
+                        x00 = endPoint.x() - startPoint.x() + x00; y00 = endPoint.y() - startPoint.y() + y00;
+                    }
+                    else if (graphClass == BEZIER) {
+                        for (int i = 0; i < transpoints.size(); ++i) {
+                            transpoints[i].xp += endPoint.x() - startPoint.x();
+                            transpoints[i].yp += endPoint.y() - startPoint.y();
+                        }
+                        BezierDrawCurve(&pixmap, transpoints);
+                    }
+                    else if (graphClass == POLYGON || graphClass == FILLPOLYGON) {
+                        for (int i = 0; i < transplg.size(); ++i) {
+                            transplg[i].setX(transplg[i].x() + endPoint.x() - startPoint.x());
+                            transplg[i].setY(transplg[i].y() + endPoint.y() - startPoint.y());
+                        }
+                        if (graphClass == POLYGON) {
+                            if (lineClass == DDALINE) DDADrawPolygon(&pixmap, transplg);
+                            else BREDrawPolygon(&pixmap, transplg);
+                        }
+                        else {
+                            ETFillPolygon(&pixmap, transplg);
+                        }
+                    }
+                    startPoint = endPoint;
+                }
+            }
+        }
         painter.drawPixmap(0,0,pixmap);
     }
 }
@@ -181,7 +282,13 @@ void Canvas::mousePressEvent(QMouseEvent *event) {
         if (this->graphClass == FILL) {
             this->AreaFill(&pixmap, this->startPoint);
         }
+        if (Transforming != -1) {
+            isTransforming = true;
+            update();
+            return;
+        }
         lastendPoint = startPoint;
+
         isDrawing = true;
         pixmapdrawDone = false;
         if (this->graphClass == POLYGON || this->graphClass == FILLPOLYGON) {
@@ -224,6 +331,11 @@ void Canvas::mouseReleaseEvent(QMouseEvent *event) {
     if (this->graphClass == FILL) return;
     if (event->button() == Qt::LeftButton) {
         endPoint = event->pos();
+        if (Transforming != -1) {
+            isTransforming = false;
+            update();
+            return;
+        }
         isDrawing = false;
         if (this->graphClass == POLYGON || this->graphClass == FILLPOLYGON) {
         /*如果下一点十分接近多边形起始点，则认为多边形封边*/
@@ -257,7 +369,11 @@ void Canvas::mouseReleaseEvent(QMouseEvent *event) {
 }
 
 void Canvas::enterEvent(QEvent *event) {
-    setCursor(Qt::CrossCursor);
+    if (Transforming == TRANSLATE) {
+        setCursor(Qt::SizeAllCursor);
+    }
+    else if (Transforming == ROTATE) setCursor(QCursor(QPixmap(":/icons/transicon/rotate").scaled(40,40), -1, -1));
+    else setCursor(Qt::CrossCursor);
 }
 
 void Canvas::leaveEvent(QEvent *event) {
@@ -657,6 +773,10 @@ void Canvas::translate(QPoint &p, int dx, int dy) {
     p.setX(p.x() + dx);
     p.setY(p.y() + dy);
 }
+void Canvas::translate(Point &p, int dx, int dy) {
+    p.xp += dx;
+    p.yp += dy;
+}
 void Canvas::translate(int &x, int &y, int dx, int dy) {
     x += dx;
     y += dy;
@@ -963,7 +1083,7 @@ void Canvas::changecolor(){
     penColor = dlg.getColor(penColor);
 }
 void Canvas::chooseLine() {
-    transmap = pixmap;
+    Transforming = -1;
     if (!isPolygonDrawDone || !isBezierDrawDone) {
         isPolygonDrawDone = true;
         isBezierDrawDone = true;
@@ -987,6 +1107,7 @@ void Canvas::chooseLine() {
     this->graphClass = LINE;
 }
 void Canvas::chooseEllipse() {
+    Transforming = -1;
     if (!isPolygonDrawDone || !isBezierDrawDone) {
         isPolygonDrawDone = true;
         isBezierDrawDone = true;
@@ -1010,6 +1131,7 @@ void Canvas::chooseEllipse() {
     this->graphClass = ELLIPSE;
 }
 void Canvas::choosePencil() {
+    Transforming = -1;
     if (!isPolygonDrawDone || !isBezierDrawDone) {
         isPolygonDrawDone = true;
         isBezierDrawDone = true;
@@ -1033,6 +1155,7 @@ void Canvas::choosePencil() {
     this->graphClass = PENCIL;
 }
 void Canvas::choosePolygon() {
+    Transforming = -1;
     if (!isPolygonDrawDone || !isBezierDrawDone) {
         isPolygonDrawDone = true;
         isBezierDrawDone = true;
@@ -1056,6 +1179,7 @@ void Canvas::choosePolygon() {
     this->graphClass = POLYGON;
 }
 void Canvas::chooseFillPolygon() {
+    Transforming = -1;
     if (!isPolygonDrawDone || !isBezierDrawDone) {
         isPolygonDrawDone = true;
         isBezierDrawDone = true;
@@ -1079,6 +1203,7 @@ void Canvas::chooseFillPolygon() {
     this->graphClass = FILLPOLYGON;
 }
 void Canvas::chooseFill() {
+    Transforming = -1;
     if (!isPolygonDrawDone || !isBezierDrawDone) {
         isPolygonDrawDone = true;
         isBezierDrawDone = true;
@@ -1103,6 +1228,7 @@ void Canvas::chooseFill() {
     this->graphClass = FILL;
 }
 void Canvas::chooseBezier() {
+    Transforming = -1;
     if (!isPolygonDrawDone || !isBezierDrawDone) {
         isPolygonDrawDone = true;
         isBezierDrawDone = true;
@@ -1125,7 +1251,12 @@ void Canvas::chooseBezier() {
     }
     this->graphClass = BEZIER;
 }
-
+void Canvas::chooseTranslate() {
+    Transforming = TRANSLATE;
+}
+void Canvas::chooseRotate() {
+    Transforming = ROTATE;
+}
 void Canvas::setSurround(const QPoint &p) {
     int xp = p.x(), yp = p.y();
     xl = min(xl, xp);

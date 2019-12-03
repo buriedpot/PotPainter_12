@@ -28,6 +28,7 @@ class MainWindow : public QMainWindow
 public:
     explicit MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
+    friend class Canvas;
     void closeEvent(QCloseEvent *event);
 
 private:
@@ -46,6 +47,7 @@ private:
     QAction *drawPolygon;
     QVector<QAction *> drawActions;
     QVector<QAction *> transActions;
+    QToolBar* toolbar, *transbar, *setbar;
 
     QAction *setcolor;
     QAction *fillAction;
@@ -55,6 +57,7 @@ private:
 
     QPixmap *canvas;
     QPainter *painter;
+
 
 
 private:
@@ -68,7 +71,7 @@ private:
 
 private slots:
     void on_resetcanvas_triggered();
-    void toolbarChecked(GRAPHCLASS, QVector<QAction*>& acts);
+    void toolbarChecked(int, QVector<QAction*>& acts);
     void choosePencil();
     void chooseLine();
     void chooseEllipse();
@@ -76,6 +79,8 @@ private slots:
     void chooseFillPolygon();
     void chooseFill();
     void chooseBezier();
+    void chooseTranslate();
+    void chooseRotate();
 
     void saveFile();
     void openFile();

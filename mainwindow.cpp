@@ -61,8 +61,17 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(drawActions[BEZIER], &QAction::triggered, ui->canvas, &Canvas::chooseBezier);
     connect(drawActions[BEZIER], &QAction::triggered, this, &MainWindow::chooseBezier);
 
+    addAction(transActions, TRANSLATE, QIcon(":/icons/transicon/translate"), "平移", "平移", "平移");
+    connect(transActions[TRANSLATE], &QAction::triggered, this, &MainWindow::chooseTranslate);
+    connect(transActions[TRANSLATE], &QAction::triggered, ui->canvas, &Canvas::chooseTranslate);
 
-    QToolBar *toolbar = this->addToolBar(tr("画图"));
+    addAction(transActions, ROTATE, QIcon(":/icons/transicon/rotate"), "旋转", "绕指定点的旋转", "鼠标控制旋转中心，滚轮旋转，后滚为顺时针");
+    connect(transActions[ROTATE], &QAction::triggered, this, &MainWindow::chooseRotate);
+    connect(transActions[ROTATE], &QAction::triggered, ui->canvas, &Canvas::chooseRotate);
+
+    //connect(ui->canvas, &Canvas::settransEnabled, this->transbar, &QToolBar::setEnabled);
+
+    toolbar = this->addToolBar(tr("画图"));
     toolbar->addAction(drawActions[PENCIL]);
     toolbar->addAction(drawActions[LINE]);
     toolbar->addAction(drawActions[ELLIPSE]);
@@ -70,10 +79,15 @@ MainWindow::MainWindow(QWidget *parent) :
     toolbar->addAction(drawActions[FILLPOLYGON]);
     toolbar->addAction(drawActions[FILL]);
     toolbar->addAction(drawActions[BEZIER]);
+    //toolbar->addAction()
+    transbar = this->addToolBar(tr("变换"));
+    transbar->addAction(transActions[TRANSLATE]);
+    transbar->addAction(transActions[ROTATE]);
+    transActions[TRANSLATE]->setCheckable(1);
+    transActions[ROTATE]->setCheckable(1);
+    transbar->setEnabled(0);
 
-    QToolBar *transbar = this->addToolBar(tr("变换"));
-
-    QToolBar *setbar = this->addToolBar(tr("设置画笔"));
+    setbar = this->addToolBar(tr("设置画笔"));
     setbar->addAction(setcolor);
     setbar->addWidget(penwidthBox);
 
@@ -184,7 +198,7 @@ void MainWindow::on_resetcanvas_triggered()
     }
 }
 
-void MainWindow::toolbarChecked(GRAPHCLASS c, QVector<QAction*>& acts) {
+void MainWindow::toolbarChecked(int c, QVector<QAction*>& acts) {
     for (int i = 0; i < acts.size(); ++i) {
         if (i != c) {
             acts[i]->setCheckable(true);
@@ -194,24 +208,38 @@ void MainWindow::toolbarChecked(GRAPHCLASS c, QVector<QAction*>& acts) {
     acts[c]->setChecked(true);
 }
 void MainWindow::chooseLine() {
+    connect(ui->canvas, &Canvas::settransEnabled, this->transbar, &QToolBar::setEnabled);
+    transbar->setEnabled(0);
     toolbarChecked(LINE, drawActions);
 }
 void MainWindow::choosePencil() {
+    connect(ui->canvas, &Canvas::settransEnabled, this->transbar, &QToolBar::setEnabled);
+    transbar->setEnabled(0);
     toolbarChecked(PENCIL, drawActions);
 }
 void MainWindow::chooseEllipse() {
+    connect(ui->canvas, &Canvas::settransEnabled, this->transbar, &QToolBar::setEnabled);
+    transbar->setEnabled(0);
     toolbarChecked(ELLIPSE, drawActions);
 }
 void MainWindow::choosePolygon() {
+    connect(ui->canvas, &Canvas::settransEnabled, this->transbar, &QToolBar::setEnabled);
+    transbar->setEnabled(0);
     toolbarChecked(POLYGON, drawActions);
 }
 void MainWindow::chooseFillPolygon() {
+    connect(ui->canvas, &Canvas::settransEnabled, this->transbar, &QToolBar::setEnabled);
+    transbar->setEnabled(0);
     toolbarChecked(FILLPOLYGON, drawActions);
 }
 void MainWindow::chooseFill() {
+    connect(ui->canvas, &Canvas::settransEnabled, this->transbar, &QToolBar::setEnabled);
+    transbar->setEnabled(0);
     toolbarChecked(FILL, drawActions);
 }
 void MainWindow::chooseBezier() {
+    connect(ui->canvas, &Canvas::settransEnabled, this->transbar, &QToolBar::setEnabled);
+    transbar->setEnabled(0);
     toolbarChecked(BEZIER, drawActions);
 }
 void MainWindow::chooseDDA() {
@@ -220,7 +248,12 @@ void MainWindow::chooseDDA() {
 void MainWindow::chooseBresenham() {
     ui->canvas->lineClass = BRELINE;
 }
-
+void MainWindow::chooseTranslate() {
+    toolbarChecked(TRANSLATE, transActions);
+}
+void MainWindow::chooseRotate() {
+    toolbarChecked(ROTATE, transActions);
+}
 
 
 void MainWindow::openFile()

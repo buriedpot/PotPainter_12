@@ -4,7 +4,7 @@
  * 定义图形的宏
  */
 #define numClass 7
-#define numTrans 4
+#define numTrans 2
 typedef enum GRAPHCLASS{
     CHOOSE=-1, PENCIL, LINE, ELLIPSE, POLYGON, FILLPOLYGON, FILL, BEZIER, DDALINE, BRELINE, DDAPOLYGON, BREPOLYGON,
     BEZIERCURVE, BSPLINECURVE
@@ -37,6 +37,7 @@ typedef struct ClassandId {
 #include <QTransform>
 #include <math.h>
 #include "graphstruct.h"
+#include "mainwindow.h"
 
 using namespace std;
 
@@ -59,7 +60,9 @@ public:
     int lineClass;//决定用DDA算法绘制还是Bresenham算法绘制
 
     int xl, xr, yd, yu;//绘制的图元的外接多边形
-
+    double x00, y00, ddx, ddy;//用于直线和椭圆操作
+    vector<Point> transpoints;//用于多边形，贝塞尔曲线操作
+    vector<QPoint> transplg;
 
 public:
     explicit Canvas(QWidget *parent = nullptr);
@@ -81,7 +84,8 @@ private:
     bool isPolygonDrawDone;
     bool isBezierDrawDone;
     bool needtoUpdate;//比如图元进行了平移、裁剪，需要擦除整个画布进行重绘
-    bool needtoTrans;//还没变换
+    int Transforming;//-1为不在变换，其他为在变换
+    bool isTransforming;
 
     /*用于用户鼠标拖动绘图时的跟踪*/
     bool updateSuccess;//由于PaintEvent处理时间不够，看看是否成功调用了Update
@@ -116,13 +120,14 @@ public:
     void BezierDrawCurve(QPixmap *map, vector<Point> & points);
 private:
     void translate(QPoint &p, int dx, int dy);
+    void translate(Point &p, int dx, int dy);
     void translate(int &x, int &y, int dx, int dy);
     void translate(long long int &x, long long int &y, int dx, int dy);
     void translate(QPoint &p, qreal dx, qreal dy);
     void rotate(QPoint &p, const QPoint& center, qreal angle);
     void rotate(int &x, int &y, const QPoint& center, qreal angle);
-signals:
-
+Q_SIGNALS:
+    void settransEnabled(bool);
 public slots:
     void setpenWidth(int w);
     void changecolor();//弹出画笔颜色选择对话框
@@ -133,6 +138,8 @@ public slots:
     void chooseFillPolygon();//填充多边形
     void chooseFill();
     void chooseBezier();
+    void chooseTranslate();
+    void chooseRotate();
     void setSurround(const QPoint&);
 };
 
