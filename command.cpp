@@ -155,10 +155,10 @@ int Command::cmdAnalyze(string cmd, Canvas& canvas, QFile& fin) {
                 p2(((Line*)(it->g))->x1, ((Line*)(it->g))->y1),
                 w1(x1, y1), w2(x2, y2);
         int result = 0;
-        if (command[6] == "Cohen-Sutherland") {
+        if (lower(command[6]) == "cohen-sutherland") {
             result = canvas.Cohen_Sutherland(p1, p2, w1, w2);
         }
-        else if (command[6] == "Liang-Barsky") {
+        else if (lower(command[6]) == "liang-barsky") {
             result = canvas.Liang_Barsky(p1, p2, w1, w2);
         }
         else return -1;
@@ -194,6 +194,12 @@ int Command::cmdAnalyze(string cmd, Canvas& canvas, QFile& fin) {
                 canvas.translate(((Polygon*)(it->g))->v[i], dx, dy);
             }
         }
+        else if (it->graphclass == BEZIER) {
+            int length = ((BezierCurve*)(it->g))->v.size();
+            for (int i = 0; i < length; ++i) {
+                canvas.translate(((BezierCurve*)(it->g))->v[i], dx, dy);
+            }
+        }
         canvas.redraw();
     }
     else if (lower(command[0]) == "rotate") {
@@ -223,6 +229,12 @@ int Command::cmdAnalyze(string cmd, Canvas& canvas, QFile& fin) {
                 canvas.rotate(((Polygon*)(it->g))->v[i], center, (double)r);
             }
         }
+        else if (it->graphclass == BEZIER) {
+            int length = ((BezierCurve*)(it->g))->v.size();
+            for (int i = 0; i < length; ++i) {
+                canvas.rotate(((BezierCurve*)(it->g))->v[i], center, (double)r);
+            }
+        }
         canvas.redraw();
     }
     else if (lower(command[0]) == "drawcurve") {
@@ -248,6 +260,54 @@ int Command::cmdAnalyze(string cmd, Canvas& canvas, QFile& fin) {
             canvas.graphseq.push_back({id, BEZIERCURVE,
                                       new BezierCurve(points, canvas.penColor, canvas.penWidth)});
         }
+        else if (lower(command[3]) == "b-spline" || lower(command[3]) == "bspline") {
+            if (pointsp.size() <= 2)
+                canvas.BSplineDrawCurve(&canvas.pixmap, pointsp, 2);
+            else
+                canvas.BSplineDrawCurve(&canvas.pixmap, pointsp, 3);
+            canvas.graphseq.push_back({id, BSPLINECURVE,
+                                      new B_SplineCurve(points, canvas.penColor, canvas.penWidth)});
+        }
+    }
+    else if (lower(command[0]) == "scale") {
+        if (command.size() < 5) return -1;
+        QString idstr(command[1].c_str()), xstr(command[2].c_str()), ystr(command[3].c_str()), sstr(command[4].c_str());
+        //qDebug() << sstr;
+        int id = idstr.toInt(), x = xstr.toInt(), y = ystr.toInt();
+        double s = sstr.toDouble();
+        //qDebug() << s;
+        vector<Graphseq>::iterator it = find(canvas.graphseq.begin(),
+                                             canvas.graphseq.end(), id);
+        QPoint center(x, y);
+        QPoint center2(0,0);
+        if (it == canvas.graphseq.end()) {
+            //cout << "No such id!" << endl;
+            return -1;
+        }
+        if (it->graphclass == ELLIPSE) {
+            canvas.scale(((Ellipse*)(it->g))->xc,
+                             ((Ellipse*)(it->g))->yc, center, s);
+            canvas.scale(((Ellipse*)(it->g))->rx,
+                             ((Ellipse*)(it->g))->ry, center2, s);
+        }
+        else if (it->graphclass == DDALINE || it->graphclass == BRELINE) {
+            canvas.scale(((Line*)(it->g))->x0, ((Line*)(it->g))->y0, center, s);
+            canvas.scale(((Line*)(it->g))->x1, ((Line*)(it->g))->y1, center, s);
+        }
+        else if (it->graphclass == DDAPOLYGON || it->graphclass == BREPOLYGON
+                 || it->graphclass == FILLPOLYGON) {
+            int length = ((Polygon*)(it->g))->v.size();
+            for (int i = 0; i < length; ++i) {
+                canvas.scale(((Polygon*)(it->g))->v[i], center, s);
+            }
+        }
+        else if (it->graphclass == BEZIER) {
+            int length = ((BezierCurve*)(it->g))->v.size();
+            for (int i = 0; i < length; ++i) {
+                canvas.scale(((BezierCurve*)(it->g))->v[i], center, s);
+            }
+        }
+        canvas.redraw();
     }
     return 0;
 }

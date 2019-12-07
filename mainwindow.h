@@ -14,7 +14,7 @@
 #include <QPainter>
 #include <QPaintEvent>
 #include <QVector>
-#include <QSpinBox>
+#include <QComboBox>
 #include <QPushButton>
 
 QT_BEGIN_NAMESPACE
@@ -52,7 +52,7 @@ private:
     QAction *setcolor;
     QAction *fillAction;
 
-    QSpinBox *penwidthBox;
+    QComboBox *penwidthScroll;
 
 
     QPixmap *canvas;
@@ -64,11 +64,14 @@ private:
     void addAction(QVector<QAction*>& acts, int index, QIcon icon, const char text[] = "",
                    const char tooltip[] = "", const char statustip[] = "");
     void inactActions(vector<QAction*>&);//Inactivate Actions.使图标可点击
+    void inactTools(QToolBar *);
     void inactAction(QAction*);
     void actActions(vector<QAction*>&);//Activate Actions.使图标不可点击
+    void actTools(QToolBar *);
     void actAction(QAction*);
 
-
+Q_SIGNALS:
+    void emitWidth(int);
 private slots:
     void on_resetcanvas_triggered();
     void toolbarChecked(int, QVector<QAction*>& acts);
@@ -81,14 +84,18 @@ private slots:
     void chooseBezier();
     void chooseTranslate();
     void chooseRotate();
+    void chooseScale();
+    void chooseClip();
 
     void saveFile();
     void openFile();
+    void importScript();
 
     void execScript(QString &filename);
     void cmdDraw();//开启命令行画图窗口
     void chooseDDA();
     void chooseBresenham();
+    void QStr2Int(const QString& text);
     //void chooseSetcolor();
 };
 

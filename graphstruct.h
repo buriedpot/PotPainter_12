@@ -32,9 +32,20 @@ typedef struct Graphseq{
 typedef struct Point {
     double xp, yp;
     Point(){}
+    Point(double x, double y){xp = x;yp=y;}
     Point(const QPoint& p) {
         xp = p.x();
         yp = p.y();
+    }
+    Point& operator*=(double t) {
+        xp*=t;
+        yp*=t;
+        return *this;
+    }
+    Point& operator+=(const Point& p) {
+        this->xp += p.xp;
+        this->yp += p.yp;
+        return *this;
     }
 } Point;
 

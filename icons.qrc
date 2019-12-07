@@ -18,5 +18,8 @@
         <file>transicon/rotate.png</file>
         <file>transicon/scale.png</file>
         <file>transicon/translate.png</file>
+        <file>transicon/clip.png</file>
+        <file>transicon/cut.png</file>
+        <file>toolsicon/fillcursor.png</file>
     </qresource>
 </RCC>

@@ -4,7 +4,7 @@
  * 定义图形的宏
  */
 #define numClass 7
-#define numTrans 2
+#define numTrans 4
 typedef enum GRAPHCLASS{
     CHOOSE=-1, PENCIL, LINE, ELLIPSE, POLYGON, FILLPOLYGON, FILL, BEZIER, DDALINE, BRELINE, DDAPOLYGON, BREPOLYGON,
     BEZIERCURVE, BSPLINECURVE
@@ -29,7 +29,9 @@ typedef struct ClassandId {
 #include <QToolBar>
 #include <QColorDialog>
 #include <QPoint>
+#include <QPointF>
 #include <QMouseEvent>
+#include <QWheelEvent>
 #include <QPen>
 #include <vector>
 #include <stack>
@@ -70,6 +72,7 @@ public:
     void mousePressEvent(QMouseEvent *event);
     void mouseMoveEvent(QMouseEvent *);
     void mouseReleaseEvent(QMouseEvent *);
+    void wheelEvent(QWheelEvent*);
     void enterEvent(QEvent *);
     void leaveEvent(QEvent *);
     void redraw();
@@ -86,6 +89,7 @@ private:
     bool needtoUpdate;//比如图元进行了平移、裁剪，需要擦除整个画布进行重绘
     int Transforming;//-1为不在变换，其他为在变换
     bool isTransforming;
+    bool isClipped;//
 
     /*用于用户鼠标拖动绘图时的跟踪*/
     bool updateSuccess;//由于PaintEvent处理时间不够，看看是否成功调用了Update
@@ -104,13 +108,19 @@ public:
     unsigned char encode(const QPoint& p, int minwx, int minwy, int maxwx, int maxwy);
     void DDADrawFoldLines(QPixmap *map, const vector<QPoint> &v);//DDA画折线（也就是不封边的多边形）
     void BREDrawFoldLines(QPixmap *map, const vector<QPoint> &v);//BRE画折线（也就是不封边的多边形）
+    void DDADrawFoldLines(QPixmap *map, const vector<Point> &v);//DDA画折线（也就是不封边的多边形）
+    void BREDrawFoldLines(QPixmap *map, const vector<Point> &v);//BRE画折线（也就是不封边的多边形）
+
 
     void DDADrawLine(QPixmap *map, int x0, int y0, int x1, int y1);//DDA算法画直线
     void BREDrawLine(QPixmap *map, int x0, int y0, int x1, int y1);//Bresenham算法画直线
     void BREDrawEllipse(QPixmap *map, long long int xc, long long int yc, long long int rx, long long int ry);//Bresenham算法画椭圆,参数依次为中心坐标和半轴长
     void DDADrawPolygon(QPixmap *map, const vector<QPoint> &v);
     void BREDrawPolygon(QPixmap *map, const vector<QPoint> &v);
+    void DDADrawPolygon(QPixmap *map, const vector<Point> &v);
+    void BREDrawPolygon(QPixmap *map, const vector<Point> &v);
     void ETFillPolygon(QPixmap *map, const vector<QPoint> &v);
+    void ETFillPolygon(QPixmap *map, const vector<Point> &v);
     void AreaFill(QPixmap *map, const QPoint& seed);
     int Cohen_Sutherland(QPoint &p1, QPoint &p2,
                           const QPoint& w1, const QPoint& w2);
@@ -119,6 +129,8 @@ public:
     void BezierDrawCurve(QPixmap *map, vector<QPoint>& points);
     void BezierDrawCurve(QPixmap *map, vector<Point> & points);
 private:
+    double N(int i, int k, double u);
+    void BSplineDrawCurve(QPixmap* map, vector<Point>& v, int k);
     void translate(QPoint &p, int dx, int dy);
     void translate(Point &p, int dx, int dy);
     void translate(int &x, int &y, int dx, int dy);
@@ -126,6 +138,11 @@ private:
     void translate(QPoint &p, qreal dx, qreal dy);
     void rotate(QPoint &p, const QPoint& center, qreal angle);
     void rotate(int &x, int &y, const QPoint& center, qreal angle);
+    void rotate(double &x, double &y, const QPoint& center, qreal angle);
+    void scale(int &x, int &y, const QPoint& center, double s);
+    void scale(long long int &x, long long int &y, const QPoint& center, double s);
+    void scale(double &x, double &y, const QPoint& center, double s);
+    void scale(QPoint &p, const QPoint& center, double s);
 Q_SIGNALS:
     void settransEnabled(bool);
 public slots:
@@ -140,7 +157,10 @@ public slots:
     void chooseBezier();
     void chooseTranslate();
     void chooseRotate();
-    void setSurround(const QPoint&);
+    void chooseScale();
+    void chooseClip();
+    void setSurround(const vector<Point> &v);
+    void setSurround2(int x0, int y0, int x1, int y1){xl = min(x0, x1); xr=max(x0, x1); yd = min(y0,y1); yu = max(y0, y1);}
 };
 
 #endif // CANVAS_H

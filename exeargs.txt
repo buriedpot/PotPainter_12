@@ -1,0 +1,1 @@
+﻿C:\Works\QTworks\build-PotPainter_v1-Desktop_Qt_5_13_1_MinGW_64_bit-Debug\debug\test.txt C:\Works\QTworks\build-PotPainter_v1-Desktop_Qt_5_13_1_MinGW_64_bit-Debug\debug\pngs

@@ -1,6 +1,7 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 #include "resetcanvasdlg.h"
+#include "command.h"
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -49,9 +50,14 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(setcolor, &QAction::triggered, ui->canvas, &Canvas::changecolor);
     //connect(drawActions[PENCIL], &QAction::triggered, this, &MainWindow::chooseLine);
 
-    penwidthBox = new QSpinBox(this);
-    penwidthBox->setValue(1);
-    connect(penwidthBox, static_cast<void(QSpinBox::*)(int)>(&QSpinBox::valueChanged), ui->canvas, &Canvas::setpenWidth);
+    penwidthScroll = new QComboBox(this);
+    QStringList strList;
+    strList<<"1"<<"2"<<"4"<<"8"<<"12"<<"16"<<"20"<<"25"<<"30"<<"40";
+    penwidthScroll->addItems(strList);
+    //penwidthScroll->resize(100, 30);
+    //qDebug() << penwidthScroll->width() << penwidthScroll->height();
+    connect(penwidthScroll, static_cast<void(QComboBox::*)(const QString&)>(&QComboBox::currentIndexChanged), this, &MainWindow::QStr2Int);
+    connect(this, &MainWindow::emitWidth, ui->canvas, &Canvas::setpenWidth);
 
     addAction(drawActions, FILL, QIcon(":/icons/toolsicon/fill"), "用颜色填充", "用选定颜色填充与选中位置同像素的连通区域", "区域填充");
     connect(drawActions[FILL], &QAction::triggered, ui->canvas, &Canvas::chooseFill);
@@ -69,6 +75,14 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(transActions[ROTATE], &QAction::triggered, this, &MainWindow::chooseRotate);
     connect(transActions[ROTATE], &QAction::triggered, ui->canvas, &Canvas::chooseRotate);
 
+    addAction(transActions, SCALE, QIcon(":/icons/transicon/scale"), "缩放", "以基准点的缩放", "鼠标控制缩放中心，前滚为放大");
+    connect(transActions[SCALE], &QAction::triggered, this, &MainWindow::chooseScale);
+    connect(transActions[SCALE], &QAction::triggered, ui->canvas, &Canvas::chooseScale);
+
+    addAction(transActions, CLIP, QIcon(":/icons/transicon/clip"), "裁剪", "对线段的裁剪", "鼠标按住拖动产生裁剪窗口，裁剪线段");
+    connect(transActions[CLIP], &QAction::triggered, this, &MainWindow::chooseClip);
+    connect(transActions[CLIP], &QAction::triggered, ui->canvas, &Canvas::chooseClip);
+
     //connect(ui->canvas, &Canvas::settransEnabled, this->transbar, &QToolBar::setEnabled);
 
     toolbar = this->addToolBar(tr("画图"));
@@ -80,16 +94,21 @@ MainWindow::MainWindow(QWidget *parent) :
     toolbar->addAction(drawActions[FILL]);
     toolbar->addAction(drawActions[BEZIER]);
     //toolbar->addAction()
+    this->addToolBarBreak();
     transbar = this->addToolBar(tr("变换"));
     transbar->addAction(transActions[TRANSLATE]);
     transbar->addAction(transActions[ROTATE]);
+    transbar->addAction(transActions[SCALE]);
+    transbar->addAction(transActions[CLIP]);
     transActions[TRANSLATE]->setCheckable(1);
     transActions[ROTATE]->setCheckable(1);
+    transActions[SCALE]->setCheckable(1);
+    transActions[CLIP]->setCheckable(1);
     transbar->setEnabled(0);
 
     setbar = this->addToolBar(tr("设置画笔"));
     setbar->addAction(setcolor);
-    setbar->addWidget(penwidthBox);
+    setbar->addWidget(penwidthScroll);
 
 
 
@@ -103,6 +122,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
     connect(ui->actionDDA, &QAction::triggered, this, &MainWindow::chooseDDA);
     connect(ui->actionBresenham, &QAction::triggered, this, &MainWindow::chooseBresenham);
+    connect(ui->impscript, &QAction::triggered, this, &MainWindow::importScript);
     painter = new QPainter(ui->canvas);
     ui->canvas->resize(1600, 1200);
 
@@ -173,11 +193,27 @@ void MainWindow::inactActions(vector<QAction *> &acts) {
         acts[i]->setEnabled(false);
     }
 }
+void MainWindow::actTools(QToolBar *bar) {
+    bar->setEnabled(true);
+}
+void MainWindow::inactTools(QToolBar *bar){
+    bar->setEnabled(false);
+}
 
 
 
 void MainWindow::on_resetcanvas_triggered()
 {
+    Canvas *tmpc = ui->canvas;
+    tmpc->isDrawing = false;
+    tmpc->Transforming = -1;
+    tmpc->isTransforming = 0;
+    tmpc->isBezierDrawDone = true;
+    tmpc->isPolygonDrawDone = true;
+    tmpc->vb.clear();
+    tmpc->graphseq.clear();
+    ui->impscript->setEnabled(1);
+    transbar->setEnabled(false);
     ResetCanvasDlg *dlg = new ResetCanvasDlg(this);
     dlg->setWindowTitle(tr("选择画布大小"));
     dlg->resize(600,400);
@@ -254,7 +290,12 @@ void MainWindow::chooseTranslate() {
 void MainWindow::chooseRotate() {
     toolbarChecked(ROTATE, transActions);
 }
-
+void MainWindow::chooseScale() {
+    toolbarChecked(SCALE, transActions);
+}
+void MainWindow::chooseClip() {
+    toolbarChecked(CLIP, transActions);
+}
 
 void MainWindow::openFile()
 {
@@ -303,7 +344,46 @@ void MainWindow::saveFile() {
         }
     }
 }
+void MainWindow::importScript() {
+    QFileDialog dlg;
+    dlg.setWindowTitle(tr("导入脚本文件"));
+    dlg.setAcceptMode(QFileDialog::AcceptOpen);
+    dlg.setNameFilter(tr("TXT Files(*.txt)"));
+    if(dlg.exec() == QDialog::Accepted) {//注意使用的是QFileDialog::Accepted或者QDialog::Accepted,不是QFileDialog::Accept
+        QString path = dlg.selectedFiles()[0];//得到用户选择的文件名
+        ui->canvas->filename = path;
+        if(!path.isEmpty()) {
+            QFile script(path);
+            script.open(QIODevice::ReadOnly | QIODevice::Text);
+            while (!script.atEnd()) {
+                QString dir_str = "pngs";
+                QDir dir;
+                if (!dir.exists(dir_str)) {
+                    dir.mkpath(dir_str);
+                }
+                Command c("pngs");
+                QByteArray line = script.readLine();
+                QString tmp(line);
+                if (tmp[tmp.size() - 1] == '\n')
+                    tmp = tmp.left(tmp.size() - 1);
+                string command = tmp.toStdString();
+                //cout << command << endl;
+                int operate = c.cmdAnalyze(command, *ui->canvas, script);
+                //canvas->update();
+                if (operate == -1) cout << "Invalid Command!" << endl;
+            }
+            update();
+        } else {
+            QMessageBox::warning(this, tr("路径未选择"),
+                                 tr("您没有选择任何图片文件!"));
+        }
+    }
+    ui->impscript->setEnabled(0);
+}
 void MainWindow::execScript(QString &filename) {
 
 }
 void MainWindow::cmdDraw(){}
+void MainWindow::QStr2Int(const QString& text) {
+    emit emitWidth(text.toInt());
+}
