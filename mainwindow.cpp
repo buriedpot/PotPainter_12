@@ -54,6 +54,7 @@ MainWindow::MainWindow(QWidget *parent) :
     QStringList strList;
     strList<<"1"<<"2"<<"4"<<"8"<<"12"<<"16"<<"20"<<"25"<<"30"<<"40";
     penwidthScroll->addItems(strList);
+    penwidthScroll->setToolTip(tr("画笔粗细"));penwidthScroll->setStatusTip(tr("画笔粗细调节"));
     //penwidthScroll->resize(100, 30);
     //qDebug() << penwidthScroll->width() << penwidthScroll->height();
     connect(penwidthScroll, static_cast<void(QComboBox::*)(const QString&)>(&QComboBox::currentIndexChanged), this, &MainWindow::QStr2Int);
@@ -66,6 +67,10 @@ MainWindow::MainWindow(QWidget *parent) :
     addAction(drawActions, BEZIER, QIcon(":/icons/toolsicon/bezier"), "Bézier曲线", "Bézier曲线", "绘制曲线");
     connect(drawActions[BEZIER], &QAction::triggered, ui->canvas, &Canvas::chooseBezier);
     connect(drawActions[BEZIER], &QAction::triggered, this, &MainWindow::chooseBezier);
+
+    addAction(drawActions, BSPLINE, QIcon(":/icons/toolsicon/bspline"), "B样条曲线", "B样条曲线", "绘制曲线");
+    connect(drawActions[BSPLINE], &QAction::triggered, ui->canvas, &Canvas::chooseBSpline);
+    connect(drawActions[BSPLINE], &QAction::triggered, this, &MainWindow::chooseBSpline);
 
     addAction(transActions, TRANSLATE, QIcon(":/icons/transicon/translate"), "平移", "平移", "平移");
     connect(transActions[TRANSLATE], &QAction::triggered, this, &MainWindow::chooseTranslate);
@@ -83,6 +88,9 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(transActions[CLIP], &QAction::triggered, this, &MainWindow::chooseClip);
     connect(transActions[CLIP], &QAction::triggered, ui->canvas, &Canvas::chooseClip);
 
+    addAction(transActions, ADJUST, QIcon(":/icons/transicon/bezier_adjust"), "曲线调整", "用鼠标对控制点调整以变换已绘制的曲线", "用鼠标对控制点调整以变换已绘制的曲线");
+    connect(transActions[ADJUST], &QAction::triggered, this, &MainWindow::chooseAdjust);
+    connect(transActions[ADJUST], &QAction::triggered, ui->canvas, &Canvas::chooseAdjust);
     //connect(ui->canvas, &Canvas::settransEnabled, this->transbar, &QToolBar::setEnabled);
 
     toolbar = this->addToolBar(tr("画图"));
@@ -93,22 +101,32 @@ MainWindow::MainWindow(QWidget *parent) :
     toolbar->addAction(drawActions[FILLPOLYGON]);
     toolbar->addAction(drawActions[FILL]);
     toolbar->addAction(drawActions[BEZIER]);
+    toolbar->addAction(drawActions[BSPLINE]);
     //toolbar->addAction()
     this->addToolBarBreak();
     transbar = this->addToolBar(tr("变换"));
+    //transbar->setOrientation(Qt::Vertical);
     transbar->addAction(transActions[TRANSLATE]);
     transbar->addAction(transActions[ROTATE]);
     transbar->addAction(transActions[SCALE]);
     transbar->addAction(transActions[CLIP]);
+    transbar->addAction(transActions[ADJUST]);
     transActions[TRANSLATE]->setCheckable(1);
     transActions[ROTATE]->setCheckable(1);
     transActions[SCALE]->setCheckable(1);
     transActions[CLIP]->setCheckable(1);
-    transbar->setEnabled(0);
+    transActions[ADJUST]->setCheckable(1);
 
+    transActions[TRANSLATE]->setEnabled(0);
+    transActions[ROTATE]->setEnabled(0);
+    transActions[SCALE]->setEnabled(0);
+    transActions[CLIP]->setEnabled(0);
+    transActions[ADJUST]->setEnabled(0);
     setbar = this->addToolBar(tr("设置画笔"));
     setbar->addAction(setcolor);
     setbar->addWidget(penwidthScroll);
+    //setbar->addWidget(QComboBox)
+    //setbar->addWidget(new QLabel(tr("Bézier阶数"), this));
 
 
 
@@ -127,6 +145,11 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->canvas->resize(1600, 1200);
 
     toolbarChecked(PENCIL, drawActions);
+    connect(ui->canvas, &Canvas::setTranslateEnabled, this->transActions[TRANSLATE], &QAction::setEnabled);
+    connect(ui->canvas, &Canvas::setRotateEnabled, this->transActions[ROTATE], &QAction::setEnabled);
+    connect(ui->canvas, &Canvas::setScaleEnabled, this->transActions[SCALE], &QAction::setEnabled);
+    connect(ui->canvas, &Canvas::setClipEnabled, this->transActions[CLIP], &QAction::setEnabled);
+    connect(ui->canvas, &Canvas::setAdjustEnabled, this->transActions[ADJUST], &QAction::setEnabled);
     //ui->canvas->pixmap.scaled()
 }
 
@@ -244,39 +267,44 @@ void MainWindow::toolbarChecked(int c, QVector<QAction*>& acts) {
     acts[c]->setChecked(true);
 }
 void MainWindow::chooseLine() {
-    connect(ui->canvas, &Canvas::settransEnabled, this->transbar, &QToolBar::setEnabled);
-    transbar->setEnabled(0);
+    setTransEnabled(0);
+    setTransChecked(0);
     toolbarChecked(LINE, drawActions);
 }
 void MainWindow::choosePencil() {
-    connect(ui->canvas, &Canvas::settransEnabled, this->transbar, &QToolBar::setEnabled);
-    transbar->setEnabled(0);
+    setTransEnabled(0);
+    setTransChecked(0);
     toolbarChecked(PENCIL, drawActions);
 }
 void MainWindow::chooseEllipse() {
-    connect(ui->canvas, &Canvas::settransEnabled, this->transbar, &QToolBar::setEnabled);
-    transbar->setEnabled(0);
+    setTransEnabled(0);
+    setTransChecked(0);
     toolbarChecked(ELLIPSE, drawActions);
 }
 void MainWindow::choosePolygon() {
-    connect(ui->canvas, &Canvas::settransEnabled, this->transbar, &QToolBar::setEnabled);
-    transbar->setEnabled(0);
+    setTransEnabled(0);
+    setTransChecked(0);
     toolbarChecked(POLYGON, drawActions);
 }
 void MainWindow::chooseFillPolygon() {
-    connect(ui->canvas, &Canvas::settransEnabled, this->transbar, &QToolBar::setEnabled);
-    transbar->setEnabled(0);
+    setTransEnabled(0);
+    setTransChecked(0);
     toolbarChecked(FILLPOLYGON, drawActions);
 }
 void MainWindow::chooseFill() {
-    connect(ui->canvas, &Canvas::settransEnabled, this->transbar, &QToolBar::setEnabled);
-    transbar->setEnabled(0);
+    setTransEnabled(0);
+    setTransChecked(0);
     toolbarChecked(FILL, drawActions);
 }
 void MainWindow::chooseBezier() {
-    connect(ui->canvas, &Canvas::settransEnabled, this->transbar, &QToolBar::setEnabled);
-    transbar->setEnabled(0);
+    setTransEnabled(0);
+    setTransChecked(0);
     toolbarChecked(BEZIER, drawActions);
+}
+void MainWindow::chooseBSpline() {
+    setTransEnabled(0);
+    setTransChecked(0);
+    toolbarChecked(BSPLINE, drawActions);
 }
 void MainWindow::chooseDDA() {
     ui->canvas->lineClass = DDALINE;
@@ -295,6 +323,9 @@ void MainWindow::chooseScale() {
 }
 void MainWindow::chooseClip() {
     toolbarChecked(CLIP, transActions);
+}
+void MainWindow::chooseAdjust() {
+    toolbarChecked(ADJUST, transActions);
 }
 
 void MainWindow::openFile()
@@ -387,3 +418,14 @@ void MainWindow::cmdDraw(){}
 void MainWindow::QStr2Int(const QString& text) {
     emit emitWidth(text.toInt());
 }
+void MainWindow::setTransChecked(bool b) {
+    for (int i = 0; i < numTrans; ++i) {
+        transActions[i]->setChecked(b);
+    }
+}
+void MainWindow::setTransEnabled(bool b) {
+    for (int i = 0; i < numTrans; ++i) {
+        transActions[i]->setEnabled(b);
+    }
+}
+

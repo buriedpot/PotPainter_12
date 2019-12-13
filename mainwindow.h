@@ -16,6 +16,7 @@
 #include <QVector>
 #include <QComboBox>
 #include <QPushButton>
+#include <QLabel>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -69,6 +70,8 @@ private:
     void actActions(vector<QAction*>&);//Activate Actions.使图标不可点击
     void actTools(QToolBar *);
     void actAction(QAction*);
+    void setTransChecked(bool);
+    void setTransEnabled(bool);
 
 Q_SIGNALS:
     void emitWidth(int);
@@ -82,10 +85,12 @@ private slots:
     void chooseFillPolygon();
     void chooseFill();
     void chooseBezier();
+    void chooseBSpline();
     void chooseTranslate();
     void chooseRotate();
     void chooseScale();
     void chooseClip();
+    void chooseAdjust();
 
     void saveFile();
     void openFile();
@@ -96,7 +101,7 @@ private slots:
     void chooseDDA();
     void chooseBresenham();
     void QStr2Int(const QString& text);
-    //void chooseSetcolor();
+        //void chooseSetcolor();
 };
 
 #endif // MAINWINDOW_H

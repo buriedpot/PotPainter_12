@@ -53,7 +53,9 @@ int Command::cmdAnalyze(string cmd, Canvas& canvas, QFile& fin) {
             return -1;
         }
         canvas.pixmap = QPixmap(w, h);
+        canvas.resize(w, h);
         canvas.pixmap.fill(Qt::white);
+        canvas.update();
         /*删除所有图元*/
         canvas.graphseq.clear();
     }
@@ -194,7 +196,7 @@ int Command::cmdAnalyze(string cmd, Canvas& canvas, QFile& fin) {
                 canvas.translate(((Polygon*)(it->g))->v[i], dx, dy);
             }
         }
-        else if (it->graphclass == BEZIER) {
+        else if (it->graphclass == BEZIERCURVE || it->graphclass == BSPLINECURVE) {
             int length = ((BezierCurve*)(it->g))->v.size();
             for (int i = 0; i < length; ++i) {
                 canvas.translate(((BezierCurve*)(it->g))->v[i], dx, dy);
@@ -229,7 +231,7 @@ int Command::cmdAnalyze(string cmd, Canvas& canvas, QFile& fin) {
                 canvas.rotate(((Polygon*)(it->g))->v[i], center, (double)r);
             }
         }
-        else if (it->graphclass == BEZIER) {
+        else if (it->graphclass == BEZIERCURVE || it->graphclass == BSPLINECURVE) {
             int length = ((BezierCurve*)(it->g))->v.size();
             for (int i = 0; i < length; ++i) {
                 canvas.rotate(((BezierCurve*)(it->g))->v[i], center, (double)r);
@@ -261,10 +263,7 @@ int Command::cmdAnalyze(string cmd, Canvas& canvas, QFile& fin) {
                                       new BezierCurve(points, canvas.penColor, canvas.penWidth)});
         }
         else if (lower(command[3]) == "b-spline" || lower(command[3]) == "bspline") {
-            if (pointsp.size() <= 2)
-                canvas.BSplineDrawCurve(&canvas.pixmap, pointsp, 2);
-            else
-                canvas.BSplineDrawCurve(&canvas.pixmap, pointsp, 3);
+            canvas.BSplineDrawCurve(&canvas.pixmap, pointsp, 4);
             canvas.graphseq.push_back({id, BSPLINECURVE,
                                       new B_SplineCurve(points, canvas.penColor, canvas.penWidth)});
         }
@@ -301,10 +300,16 @@ int Command::cmdAnalyze(string cmd, Canvas& canvas, QFile& fin) {
                 canvas.scale(((Polygon*)(it->g))->v[i], center, s);
             }
         }
-        else if (it->graphclass == BEZIER) {
+        else if (it->graphclass == BEZIERCURVE) {
             int length = ((BezierCurve*)(it->g))->v.size();
             for (int i = 0; i < length; ++i) {
                 canvas.scale(((BezierCurve*)(it->g))->v[i], center, s);
+            }
+        }
+        else if (it->graphclass == BSPLINECURVE) {
+            int length = ((B_SplineCurve*)(it->g))->v.size();
+            for (int i = 0; i < length; ++i) {
+                canvas.scale(((B_SplineCurve*)(it->g))->v[i], center, s);
             }
         }
         canvas.redraw();

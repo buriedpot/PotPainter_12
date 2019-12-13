@@ -3,14 +3,14 @@
 /*
  * 定义图形的宏
  */
-#define numClass 7
-#define numTrans 4
+#define numClass 8
+#define numTrans 5
 typedef enum GRAPHCLASS{
-    CHOOSE=-1, PENCIL, LINE, ELLIPSE, POLYGON, FILLPOLYGON, FILL, BEZIER, DDALINE, BRELINE, DDAPOLYGON, BREPOLYGON,
+    CHOOSE=-1, PENCIL, LINE, ELLIPSE, POLYGON, FILLPOLYGON, FILL, BEZIER, BSPLINE, DDALINE, BRELINE, DDAPOLYGON, BREPOLYGON,
     BEZIERCURVE, BSPLINECURVE
 } GRAPHCLASS;
 typedef enum TRANSCLASS {
-    TRANSLATE = 0, ROTATE, SCALE, CLIP
+    TRANSLATE = 0, ROTATE, SCALE, CLIP, ADJUST
 } TRANSCLASS;
 
 typedef struct ClassandId {
@@ -37,6 +37,7 @@ typedef struct ClassandId {
 #include <stack>
 #include <iostream>
 #include <QTransform>
+#include <QStaticText>
 #include <math.h>
 #include "graphstruct.h"
 #include "mainwindow.h"
@@ -86,10 +87,14 @@ private:
     int lineDrawed;//多边形已经绘制了几条边或者贝塞尔曲线已经绘制了几加一个点
     bool isPolygonDrawDone;
     bool isBezierDrawDone;
+    bool bezierReadyDone;
     bool needtoUpdate;//比如图元进行了平移、裁剪，需要擦除整个画布进行重绘
     int Transforming;//-1为不在变换，其他为在变换
     bool isTransforming;
     bool isClipped;//
+    int kBSpline;//B样条的阶数，默认为4，最低为2.次数为阶数-1.
+    int nCurve;//曲线控制点的数目
+    int AdjustNode;//正在被拖动的点
 
     /*用于用户鼠标拖动绘图时的跟踪*/
     bool updateSuccess;//由于PaintEvent处理时间不够，看看是否成功调用了Update
@@ -129,6 +134,8 @@ public:
     void BezierDrawCurve(QPixmap *map, vector<QPoint>& points);
     void BezierDrawCurve(QPixmap *map, vector<Point> & points);
 private:
+    int getCurveNode(const QPoint& p);
+    void completeDraw();//补全未画完的内容，主要是多边形
     double N(int i, int k, double u);
     void BSplineDrawCurve(QPixmap* map, vector<Point>& v, int k);
     void translate(QPoint &p, int dx, int dy);
@@ -145,6 +152,11 @@ private:
     void scale(QPoint &p, const QPoint& center, double s);
 Q_SIGNALS:
     void settransEnabled(bool);
+    void setTranslateEnabled(bool);
+    void setRotateEnabled(bool);
+    void setScaleEnabled(bool);
+    void setClipEnabled(bool);
+    void setAdjustEnabled(bool);
 public slots:
     void setpenWidth(int w);
     void changecolor();//弹出画笔颜色选择对话框
@@ -155,10 +167,12 @@ public slots:
     void chooseFillPolygon();//填充多边形
     void chooseFill();
     void chooseBezier();
+    void chooseBSpline();
     void chooseTranslate();
     void chooseRotate();
     void chooseScale();
     void chooseClip();
+    void chooseAdjust();
     void setSurround(const vector<Point> &v);
     void setSurround2(int x0, int y0, int x1, int y1){xl = min(x0, x1); xr=max(x0, x1); yd = min(y0,y1); yu = max(y0, y1);}
 };
