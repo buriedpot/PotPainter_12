@@ -23,5 +23,6 @@
         <file>toolsicon/fillcursor.png</file>
         <file>transicon/bezier_adjust.png</file>
         <file>toolsicon/bspline.png</file>
+        <file>icons/linealgorithm.png</file>
     </qresource>
 </RCC>

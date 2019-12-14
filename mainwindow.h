@@ -17,6 +17,7 @@
 #include <QComboBox>
 #include <QPushButton>
 #include <QLabel>
+#include <QSpinBox>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -54,6 +55,8 @@ private:
     QAction *fillAction;
 
     QComboBox *penwidthScroll;
+    QSpinBox *nCurveBox;
+    QSpinBox *kBSplineBox;
 
 
     QPixmap *canvas;

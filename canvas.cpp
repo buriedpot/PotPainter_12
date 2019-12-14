@@ -17,7 +17,7 @@ Canvas::Canvas(QWidget *parent) : QWidget(parent)
     this->pencapStyle = Qt::RoundCap;
     this->background = Qt::white;
     this->kBSpline = 4;
-    nCurve = 5;
+    nCurve = 3;
     /*Drawing status init*/
     this->isDrawing = false;//初始时用户没有在画图
     this->isSaved = true;
@@ -449,7 +449,7 @@ void Canvas::paintEvent(QPaintEvent *event) {
             dashes << 5 << space << 5 <<space;
             pen.setDashPattern(dashes);
             pen.setColor(QColor(25, 25, 112));
-            pen.setWidth(1);
+            pen.setWidth(2);
             pen.setCapStyle(Qt::SquareCap);
             painter.setPen(pen);
             if (transpoints.size() > 0){
@@ -539,7 +539,7 @@ void Canvas::mouseMoveEvent(QMouseEvent *event) {
 }
 
 void Canvas::mouseReleaseEvent(QMouseEvent *event) {
-    qDebug() << lineDrawed;
+    //qDebug() << lineDrawed;
     if (this->graphClass == FILL) return;
     if (event->button() == Qt::LeftButton) {
         endPoint = event->pos();
@@ -597,7 +597,7 @@ void Canvas::wheelEvent(QWheelEvent *event) {
             rotate(x11, y11, endPoint, -event->delta() / 6.0);
             ddx = x11 - x00; ddy = y11 - y00;
         }
-        else if (graphClass == POLYGON || graphClass == FILLPOLYGON || graphClass == BEZIERCURVE) {
+        else if (graphClass == POLYGON || graphClass == FILLPOLYGON || graphClass == BEZIERCURVE || graphClass == BSPLINECURVE) {
             for (int i = 0; i < transpoints.size(); ++i) {
                 rotate(transpoints[i].xp, transpoints[i].yp, endPoint, -event->delta() / 6.0);
             }
@@ -618,7 +618,7 @@ void Canvas::wheelEvent(QWheelEvent *event) {
                 scale(ddx, ddy, center2, 1 - angle / 630);
             }
         }
-        else if (graphClass == POLYGON || graphClass == FILLPOLYGON || graphClass == BEZIERCURVE) {
+        else if (graphClass == POLYGON || graphClass == FILLPOLYGON || graphClass == BEZIERCURVE || graphClass == BSPLINECURVE) {
             if (event->delta() > 0) {
                 for (int i = 0; i < transpoints.size(); ++i) {
                     scale(transpoints[i].xp, transpoints[i].yp, endPoint, 1 + angle / 630);
@@ -671,7 +671,12 @@ unsigned char Canvas::encode(const QPoint &p, int minwx, int minwy, int maxwx, i
 void Canvas::setpenWidth(int w) {
     this->penWidth = w;
 }
-
+void Canvas::setnCurve(int n) {
+    this->nCurve = n - 1;//canvas的nCurve指的是边数
+}
+void Canvas::setkBSpline(int k) {
+    this->kBSpline = k;
+}
 void Canvas::DDADrawFoldLines(QPixmap *map, const vector<QPoint> &v) {
     int pointnum = v.size();
     for (int i = 0; i < pointnum - 1; ++i) {

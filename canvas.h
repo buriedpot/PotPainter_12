@@ -159,6 +159,8 @@ Q_SIGNALS:
     void setAdjustEnabled(bool);
 public slots:
     void setpenWidth(int w);
+    void setnCurve(int n);
+    void setkBSpline(int k);
     void changecolor();//弹出画笔颜色选择对话框
     void chooseLine();//用户选择要画线
     void chooseEllipse();//用户选择要画椭圆

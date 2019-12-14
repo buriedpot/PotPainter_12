@@ -88,7 +88,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(transActions[CLIP], &QAction::triggered, this, &MainWindow::chooseClip);
     connect(transActions[CLIP], &QAction::triggered, ui->canvas, &Canvas::chooseClip);
 
-    addAction(transActions, ADJUST, QIcon(":/icons/transicon/bezier_adjust"), "曲线调整", "用鼠标对控制点调整以变换已绘制的曲线", "用鼠标对控制点调整以变换已绘制的曲线");
+    addAction(transActions, ADJUST, QIcon(":/icons/transicon/bezier_adjust"), "曲线调整", "调整\n用鼠标对控制点调整以变换多边形或曲线控制多边形", "用鼠标对控制点调整以变换已绘制的曲线");
     connect(transActions[ADJUST], &QAction::triggered, this, &MainWindow::chooseAdjust);
     connect(transActions[ADJUST], &QAction::triggered, ui->canvas, &Canvas::chooseAdjust);
     //connect(ui->canvas, &Canvas::settransEnabled, this->transbar, &QToolBar::setEnabled);
@@ -125,6 +125,19 @@ MainWindow::MainWindow(QWidget *parent) :
     setbar = this->addToolBar(tr("设置画笔"));
     setbar->addAction(setcolor);
     setbar->addWidget(penwidthScroll);
+    setbar->addWidget(new QLabel("曲线控制点数", this));
+    nCurveBox = new QSpinBox(this);
+    nCurveBox->setRange(2, 15);
+    nCurveBox->setValue(4);
+    kBSplineBox = new QSpinBox(this);
+    kBSplineBox->setRange(2, 5);
+    kBSplineBox->setValue(4);
+    connect(nCurveBox, static_cast<void(QSpinBox::*)(int)>(&QSpinBox::valueChanged), ui->canvas, &Canvas::setnCurve);
+    connect(kBSplineBox, static_cast<void(QSpinBox::*)(int)>(&QSpinBox::valueChanged), ui->canvas, &Canvas::setkBSpline);
+    setbar->addWidget(nCurveBox);
+    setbar->addWidget(new QLabel("B样条阶数", this));
+    setbar->addWidget(kBSplineBox);
+
     //setbar->addWidget(QComboBox)
     //setbar->addWidget(new QLabel(tr("Bézier阶数"), this));
 
@@ -136,6 +149,8 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->openpic->setShortcuts(QKeySequence::Open);
     ui->savepic->setShortcuts(QKeySequence::Save);
     ui->savepic->setIcon(QIcon(":/icons/images/file-save"));
+    ui->linealgorithm->setIcon(QIcon(":/icons/icons/linealgorithm"));
+
     connect(ui->savepic, &QAction::triggered, this, &MainWindow::saveFile);
 
     connect(ui->actionDDA, &QAction::triggered, this, &MainWindow::chooseDDA);

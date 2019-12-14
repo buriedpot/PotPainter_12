@@ -52,7 +52,7 @@
     <property name="title">
      <string>编辑(&amp;E)</string>
     </property>
-    <widget class="QMenu" name="menu">
+    <widget class="QMenu" name="linealgorithm">
      <property name="title">
       <string>线段绘制算法</string>
      </property>
@@ -61,7 +61,7 @@
      <addaction name="actionBresenham"/>
     </widget>
     <addaction name="resetcanvas"/>
-    <addaction name="menu"/>
+    <addaction name="linealgorithm"/>
    </widget>
    <addaction name="menu_File"/>
    <addaction name="menu_Edit"/>
