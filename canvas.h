@@ -7,7 +7,7 @@
 #define numTrans 5
 typedef enum GRAPHCLASS{
     CHOOSE=-1, PENCIL, LINE, ELLIPSE, POLYGON, FILLPOLYGON, FILL, BEZIER, BSPLINE, DDALINE, BRELINE, DDAPOLYGON, BREPOLYGON,
-    BEZIERCURVE, BSPLINECURVE
+    BEZIERCURVE, BSPLINECURVE, COHEN_SUTHERLAND, LIANG_BARSKY
 } GRAPHCLASS;
 typedef enum TRANSCLASS {
     TRANSLATE = 0, ROTATE, SCALE, CLIP, ADJUST
@@ -95,6 +95,7 @@ private:
     int kBSpline;//B样条的阶数，默认为4，最低为2.次数为阶数-1.
     int nCurve;//曲线控制点的数目
     int AdjustNode;//正在被拖动的点
+    int clipagrthm;//裁剪算法
 
     /*用于用户鼠标拖动绘图时的跟踪*/
     bool updateSuccess;//由于PaintEvent处理时间不够，看看是否成功调用了Update
@@ -136,6 +137,17 @@ public:
 private:
     int getCurveNode(const QPoint& p);
     void completeDraw();//补全未画完的内容，主要是多边形
+    void setPainterDotted(QPainter *painter, QColor color, int width) {
+        QPen pen;
+        QVector<qreal> dashes;
+        qreal space = 3;
+        dashes << 5 << space << 5 <<space;
+        pen.setDashPattern(dashes);
+        pen.setColor(color);
+        pen.setWidth(width);
+        pen.setCapStyle(Qt::SquareCap);
+        painter->setPen(pen);
+    }
     double N(int i, int k, double u);
     void BSplineDrawCurve(QPixmap* map, vector<Point>& v, int k);
     void translate(QPoint &p, int dx, int dy);
@@ -158,6 +170,12 @@ Q_SIGNALS:
     void setClipEnabled(bool);
     void setAdjustEnabled(bool);
 public slots:
+    void chooseLiang_Barsky(){
+        clipagrthm = LIANG_BARSKY;
+    }
+    void chooseCohen_Sutherland(){
+        clipagrthm = COHEN_SUTHERLAND;
+    }
     void setpenWidth(int w);
     void setnCurve(int n);
     void setkBSpline(int k);

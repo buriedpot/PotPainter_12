@@ -24,5 +24,7 @@
         <file>transicon/bezier_adjust.png</file>
         <file>toolsicon/bspline.png</file>
         <file>icons/linealgorithm.png</file>
+        <file>icons/clipalgorithm.png</file>
+        <file>icons/resizecanvas.png</file>
     </qresource>
 </RCC>

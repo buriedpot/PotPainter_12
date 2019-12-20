@@ -33,6 +33,7 @@ Canvas::Canvas(QWidget *parent) : QWidget(parent)
     isTransforming = false;
     isClipped = true;
     AdjustNode = -1;
+    clipagrthm = LIANG_BARSKY;
     /*Initialization of pixmap*/
     this->pixmap = QPixmap(size());
     this->pixmap.fill(Qt::white);
@@ -97,15 +98,7 @@ void Canvas::paintEvent(QPaintEvent *event) {
         }
         painter.drawPixmap(0,0,tempmap);
         if (graphClass == BEZIERCURVE || graphClass == BSPLINECURVE) {
-            QPen pen;
-            QVector<qreal> dashes;
-            qreal space = 3;
-            dashes << 5 << space << 5 <<space;
-            pen.setDashPattern(dashes);
-            pen.setColor(QColor(114,128,144));
-            pen.setWidth(1);
-            pen.setCapStyle(Qt::SquareCap);
-            painter.setPen(pen);
+            setPainterDotted(&painter, QColor(114,128,144), 1);
             if (tmpv.size() > 0)
                 for (int i = 0; i < tmpv.size() - 1; ++i) {
                     painter.drawLine(tmpv[i].xp, tmpv[i].yp, tmpv[i+1].xp, tmpv[i+1].yp);
@@ -232,6 +225,11 @@ void Canvas::paintEvent(QPaintEvent *event) {
                 pixmapdrawDone = true;
                 isSaved = false;
                 painter.drawPixmap(0, 0, beziermap);
+                setPainterDotted(&painter, QColor(114,128,144), 1);
+                if (vb.size() > 0)
+                    for (int i = 0; i < vb.size() - 1; ++i) {
+                        painter.drawLine(vb[i].xp, vb[i].yp, vb[i+1].xp, vb[i+1].yp);
+                    }
                 return;
             }
             pixmapdrawDone = true;
@@ -240,45 +238,38 @@ void Canvas::paintEvent(QPaintEvent *event) {
         }
         if (Transforming != -1) {
             if (Transforming == TRANSLATE) {
+                pixmap = transmap;
                 if (isTransforming == true){
-                    pixmap = transmap;
+                    if (graphClass == LINE || graphClass == ELLIPSE) {
+                        x00 = endPoint.x() - startPoint.x() + x00; y00 = endPoint.y() - startPoint.y() + y00;
+                        setSurround2(x00,y00,x00+ddx,y00+ddy);
+                    }
+                    else if (graphClass == BEZIERCURVE || graphClass == BSPLINECURVE || graphClass == POLYGON ||
+                             graphClass == FILLPOLYGON) {
+                        for (int i = 0; i < transpoints.size(); ++i) {
+                            transpoints[i].xp += endPoint.x() - startPoint.x();
+                            transpoints[i].yp += endPoint.y() - startPoint.y();
+                        }
+                        setSurround(transpoints);
+                    }
+                }
                 if (graphClass == LINE) {
                     if (lineClass == DDALINE)
-                        this->DDADrawLine(&pixmap, endPoint.x() - startPoint.x() + x00, endPoint.y() - startPoint.y() + y00,
-                                      endPoint.x() - startPoint.x() + x00 + ddx, endPoint.y() - startPoint.y() + y00 + ddy);
+                        this->DDADrawLine(&pixmap, x00, y00, x00 + ddx, y00 + ddy);
                     else
-                        this->BREDrawLine(&pixmap, endPoint.x() - startPoint.x() + x00, endPoint.y() - startPoint.y() + y00,
-                                  endPoint.x() - startPoint.x() + x00 + ddx, endPoint.y() - startPoint.y() + y00 + ddy);
-                    x00 = endPoint.x() - startPoint.x() + x00; y00 = endPoint.y() - startPoint.y() + y00;
-                    setSurround2(x00,y00,x00+ddx,y00+ddy);
+                        this->BREDrawLine(&pixmap, x00, y00, x00 + ddx, y00 + ddy);
                 }
                 else if (graphClass == ELLIPSE) {
                     this->BREDrawEllipse(&pixmap, (endPoint.x() - startPoint.x() + x00) + ddx / 2, endPoint.y() - startPoint.y() + y00 +ddy/2,
                                          abs(ddx / 2), abs(ddy / 2));
-                    x00 = endPoint.x() - startPoint.x() + x00; y00 = endPoint.y() - startPoint.y() + y00;
-                    setSurround2(x00,y00,x00+ddx,y00+ddy);
                 }
                 else if (graphClass == BEZIERCURVE) {
-                    for (int i = 0; i < transpoints.size(); ++i) {
-                        transpoints[i].xp += endPoint.x() - startPoint.x();
-                        transpoints[i].yp += endPoint.y() - startPoint.y();
-                    }
                     BezierDrawCurve(&pixmap, transpoints);
-                    setSurround(transpoints);
                 }
                 else if (graphClass == BSPLINECURVE) {
-                    for (int i = 0; i < transpoints.size(); ++i) {
-                        transpoints[i].xp += endPoint.x() - startPoint.x();
-                        transpoints[i].yp += endPoint.y() - startPoint.y();
-                    }
                     BSplineDrawCurve(&pixmap, transpoints, kBSpline);
-                    setSurround(transpoints);
                 }
                 else if (graphClass == POLYGON || graphClass == FILLPOLYGON) {
-                    for (int i = 0; i < transpoints.size(); ++i) {
-                        transpoints[i].xp = (transpoints[i].xp + endPoint.x() - startPoint.x());
-                        transpoints[i].yp = (transpoints[i].yp + endPoint.y() - startPoint.y());
-                    }
                     if (graphClass == POLYGON) {
                         if (lineClass == DDALINE) DDADrawPolygon(&pixmap, transpoints);
                         else BREDrawPolygon(&pixmap, transpoints);
@@ -286,9 +277,8 @@ void Canvas::paintEvent(QPaintEvent *event) {
                     else {
                         ETFillPolygon(&pixmap, transpoints);
                     }
-                    setSurround(transpoints);
                 }
-                startPoint = endPoint;}
+                startPoint = endPoint;
             }
             else if (Transforming == ROTATE) {
                 QPixmap originmap = pixmap;
@@ -366,7 +356,11 @@ void Canvas::paintEvent(QPaintEvent *event) {
                 pixmap = transmap;
                 if (graphClass == LINE && isClipped == false) {
                     QPoint p1(x00, y00), p2(x00 + ddx, y00 + ddy);
-                    int result = Liang_Barsky(p1, p2, startPoint, endPoint);
+                    int result = 0;
+                    if (clipagrthm == LIANG_BARSKY)
+                        result = Liang_Barsky(p1, p2, startPoint, endPoint);
+                    else
+                        result = Cohen_Sutherland(p1, p2, startPoint, endPoint);
                     if (result == 1) {
                         x00 = p1.x(); y00 = p1.y(); ddx = p2.x() - x00; ddy = p2.y() - y00;
                     }
@@ -380,31 +374,28 @@ void Canvas::paintEvent(QPaintEvent *event) {
                 else pixmap = originmap;
             }
             else if (Transforming == ADJUST) {
+                pixmap = transmap;
                 if (isTransforming == true){
-                    pixmap = transmap;
-                    if (graphClass == BEZIERCURVE) {
+                    if (graphClass == BEZIERCURVE || graphClass == BSPLINECURVE || graphClass == POLYGON ||
+                            graphClass == FILLPOLYGON) {
                         transpoints[AdjustNode].xp = endPoint.x();
                         transpoints[AdjustNode].yp = endPoint.y();
-                        BezierDrawCurve(&pixmap, transpoints);
                         setSurround(transpoints);
                     }
-                    else if (graphClass == BSPLINECURVE) {
-                        transpoints[AdjustNode].xp = endPoint.x();
-                        transpoints[AdjustNode].yp = endPoint.y();
-                        BSplineDrawCurve(&pixmap, transpoints, kBSpline);
-                        setSurround(transpoints);
+                }
+                if (graphClass == BEZIERCURVE) {
+                    BezierDrawCurve(&pixmap, transpoints);
+                }
+                else if (graphClass == BSPLINECURVE) {
+                    BSplineDrawCurve(&pixmap, transpoints, kBSpline);
+                }
+                else if (graphClass == POLYGON || graphClass == FILLPOLYGON) {
+                    if (graphClass == POLYGON) {
+                        if (lineClass == DDALINE) DDADrawPolygon(&pixmap, transpoints);
+                        else BREDrawPolygon(&pixmap, transpoints);
                     }
-                    else if (graphClass == POLYGON || graphClass == FILLPOLYGON) {
-                            transpoints[AdjustNode].xp = endPoint.x();
-                            transpoints[AdjustNode].yp = endPoint.y();
-                        if (graphClass == POLYGON) {
-                            if (lineClass == DDALINE) DDADrawPolygon(&pixmap, transpoints);
-                            else BREDrawPolygon(&pixmap, transpoints);
-                        }
-                        else {
-                            ETFillPolygon(&pixmap, transpoints);
-                        }
-                        setSurround(transpoints);
+                    else {
+                        ETFillPolygon(&pixmap, transpoints);
                     }
                 }
             }
@@ -414,44 +405,20 @@ void Canvas::paintEvent(QPaintEvent *event) {
             QPen pen;
             pen.setColor(Qt::blue);
             pen.setWidth(5);
-            pen.setCapStyle(pencapStyle);
+            pen.setCapStyle(Qt::RoundCap);
             painter.setPen(pen);
             painter.drawEllipse(endPoint, 10, 10);
         }
         if (Transforming == TRANSLATE || Transforming == SCALE) {
-            QPen pen;
-            QVector<qreal> dashes;
-            qreal space = 3;
-            dashes << 5 << space << 5 <<space;
-            pen.setDashPattern(dashes);
-            pen.setColor(Qt::blue);
-            pen.setWidth(2);
-            pen.setCapStyle(Qt::SquareCap);
-            painter.setPen(pen);
+            setPainterDotted(&painter, Qt::blue, 2);
             painter.drawRect(xl, yd, xr - xl, yu - yd);
         }
         if (Transforming == CLIP) {
-            QPen pen;
-            QVector<qreal> dashes;
-            qreal space = 3;
-            dashes << 5 << space << 5 <<space;
-            pen.setDashPattern(dashes);
-            pen.setColor(Qt::red);
-            pen.setWidth(2);
-            pen.setCapStyle(Qt::SquareCap);
-            painter.setPen(pen);
+            setPainterDotted(&painter, Qt::red, 2);
             painter.drawRect(min(sx,ex), min(sy,ey), abs(ex - sx),abs(ey - sy));
         }
         if (Transforming == ADJUST) {
-            QPen pen;
-            QVector<qreal> dashes;
-            qreal space = 3;
-            dashes << 5 << space << 5 <<space;
-            pen.setDashPattern(dashes);
-            pen.setColor(QColor(25, 25, 112));
-            pen.setWidth(2);
-            pen.setCapStyle(Qt::SquareCap);
-            painter.setPen(pen);
+            setPainterDotted(&painter, QColor(25, 25, 112), 2);
             if (transpoints.size() > 0){
                 int i, length = transpoints.size();
                 if (graphClass == POLYGON || graphClass == FILLPOLYGON)
@@ -478,7 +445,9 @@ void Canvas::mousePressEvent(QMouseEvent *event) {
         if (this->graphClass == FILL) {
             this->AreaFill(&pixmap, this->startPoint);
         }
+        qDebug() << "before enabled";
         if (Transforming != -1) {
+            qDebug() << "no enabled";
             AdjustNode = (getCurveNode(event->pos()));
             if((event->pos().x() >= xl && event->pos().x() <= xr && event->pos().y() >= yd && event->pos().y() <= yu) ||
                     AdjustNode != -1) {
@@ -487,7 +456,8 @@ void Canvas::mousePressEvent(QMouseEvent *event) {
             update();
             return;
         }
-        else {emit setTranslateEnabled(0); emit setRotateEnabled(0); emit setScaleEnabled(0); emit setClipEnabled(0); emit setAdjustEnabled(0);}
+        else {qDebug() << "should enabled";emit setTranslateEnabled(0); emit setRotateEnabled(0); emit setScaleEnabled(0); emit setClipEnabled(0); emit setAdjustEnabled(0);}
+        qDebug() << "after enabled" << endl;
         lastendPoint = startPoint;
 
         isDrawing = true;
@@ -562,7 +532,7 @@ void Canvas::mouseReleaseEvent(QMouseEvent *event) {
             //prePlgpnt = endPoint;
         }
         else if (graphClass == BEZIERCURVE) {
-            if (lineDrawed == nCurve - 1) {
+            if (lineDrawed >= nCurve - 1) {
                 vector<Point>::iterator it = vb.begin() + lineDrawed;
                 vb.insert(it, endPoint);
                 bezierReadyDone = true;
@@ -577,7 +547,7 @@ void Canvas::mouseReleaseEvent(QMouseEvent *event) {
             }
         }
         else if (graphClass == BSPLINECURVE) {
-            if (lineDrawed == nCurve - 1) {
+            if (lineDrawed >= nCurve - 1) {
                 vb.push_back(endPoint);
                 bezierReadyDone = true;
             }
@@ -1097,7 +1067,7 @@ double Canvas::N(int i, int k, double u) {
 void Canvas::BSplineDrawCurve(QPixmap *map, vector<Point> &v, int k){
     vector<Point> curve;
     //qDebug() << "fuck" << v.size();
-    for(double u = (double)k - 1; u < v.size(); u += 0.01) {
+    for(double u = (double)k - 1; u < v.size(); u += 0.001) {
         //qDebug() << "fuck";
         Point tmp(0, 0);
         for(int i = 0; i < v.size(); ++i) {
@@ -1222,7 +1192,8 @@ int Canvas::Cohen_Sutherland(QPoint &p1, QPoint &p2,
     /*不确定线段*/
     else {
         if (x2 == x1) {
-            if (y2 > y1) {
+            if (min(y1, y2) > maxwy || max(y1, y2) < minwy) return 2;
+            if (y2 >= y1) {
                 if (y2 > maxwy) {
                     p2.setY(maxwy);
                 }
@@ -1240,11 +1211,12 @@ int Canvas::Cohen_Sutherland(QPoint &p1, QPoint &p2,
             }
         }
         else if (y1 == y2) {
-            if (x2 > x1) {
+            if (min(x1, x2) > maxwx || max(x1, x2) < minwx) return 2;
+            if (x2 >= x1) {
                 if (x2 > maxwx) {
                     p2.setX(maxwx);
                 }
-                if (y1 < minwy) {
+                if (x1 < minwx) {
                     p1.setX(minwx);
                 }
             }
@@ -1297,7 +1269,7 @@ int Canvas::Cohen_Sutherland(QPoint &p1, QPoint &p2,
                 }
             }
         }
-        return 3;
+        return 1;
     }
 }
 /*线段裁剪梁友栋-Barsky算法*/
@@ -1379,7 +1351,8 @@ void Canvas::BezierDrawCurve(QPixmap *map, vector<QPoint>& points) {
     bool flag = true;//flag表示是否已经足够接近
     for (int i = 1; i < length - 1; ++i) {
         //cout << abs(a * points[i].x() + b * points[i].y() + c) / sqavg_ab << endl;
-        if (abs((a * points[i].x() + b * points[i].y() + c) / sqavg_ab) > 1) {
+        if ((sqavg_ab == 0 && pow(points[i].x() - points[0].x(), 2) + pow(points[i].y() - points[0].y(), 2) > 0.1)
+                || abs((a * points[i].x() + b * points[i].y() + c) / sqavg_ab) > 1) {
             flag = false; //不够接近
             break;
         }
@@ -1409,6 +1382,7 @@ void Canvas::BezierDrawCurve(QPixmap *map, vector<QPoint>& points) {
         BezierDrawCurve(map, points2);
     }
 }
+
 void Canvas::BezierDrawCurve(QPixmap *map, vector<Point> &points) {
     double a, b, c, sqavg_ab;//ab的平方平均数，根号下a2+b2
     int length = points.size();
@@ -1420,7 +1394,8 @@ void Canvas::BezierDrawCurve(QPixmap *map, vector<Point> &points) {
     bool flag = true;//flag表示是否已经足够接近
     for (int i = 1; i < length - 1; ++i) {
         //cout << abs(a * points[i].x() + b * points[i].y() + c) / sqavg_ab << endl;
-        if (abs((a * points[i].xp + b * points[i].yp + c) / sqavg_ab) > 0.1) {
+        if ((sqavg_ab == 0 && pow(points[i].xp - points[0].xp, 2) + pow(points[i].yp - points[0].yp, 2) > 0.1)
+                ||abs((a * points[i].xp + b * points[i].yp + c) / sqavg_ab) > 0.1) {
             flag = false; //不够接近
             break;
         }
@@ -1458,7 +1433,7 @@ int Canvas::getCurveNode(const QPoint &p) {
     for (int i = 0; i < transpoints.size(); ++i) {
         double dx = transpoints[i].xp - p.x();
         double dy = transpoints[i].yp - p.y();
-        if(dx * dx + dy * dy < 400) {
+        if(dx * dx + dy * dy < 1600) {
             return i;
         }
     }
@@ -1468,7 +1443,9 @@ void Canvas::completeDraw() {
     if (!isPolygonDrawDone || !isBezierDrawDone) {
         isPolygonDrawDone = true;
         isBezierDrawDone = true;
+        bezierReadyDone = true;
         lineDrawed = 0;
+        startPoint = endPoint;
         if (graphClass == POLYGON) {
             if (this->lineClass == DDALINE)
                 DDADrawPolygon(&pixmap, vb);
@@ -1481,6 +1458,10 @@ void Canvas::completeDraw() {
         }
         else if (graphClass == BEZIERCURVE) {
             BezierDrawCurve(&pixmap, vb);
+            vb.clear();
+        }
+        else if (graphClass == BSPLINECURVE) {
+            BSplineDrawCurve(&pixmap, vb, kBSpline);
             vb.clear();
         }
     }

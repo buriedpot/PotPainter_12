@@ -60,8 +60,17 @@
      <addaction name="actionDDA"/>
      <addaction name="actionBresenham"/>
     </widget>
+    <widget class="QMenu" name="clipalgorithm">
+     <property name="title">
+      <string>线段裁剪算法</string>
+     </property>
+     <addaction name="action_Barsky"/>
+     <addaction name="actionCohen_Sutherland"/>
+    </widget>
     <addaction name="resetcanvas"/>
+    <addaction name="resizecanvas"/>
     <addaction name="linealgorithm"/>
+    <addaction name="clipalgorithm"/>
    </widget>
    <addaction name="menu_File"/>
    <addaction name="menu_Edit"/>
@@ -135,6 +144,21 @@
   <action name="action7">
    <property name="text">
     <string>7</string>
+   </property>
+  </action>
+  <action name="action_Barsky">
+   <property name="text">
+    <string>梁友栋-Barsky</string>
+   </property>
+  </action>
+  <action name="actionCohen_Sutherland">
+   <property name="text">
+    <string>Cohen-Sutherland</string>
+   </property>
+  </action>
+  <action name="resizecanvas">
+   <property name="text">
+    <string>调整画布大小</string>
    </property>
   </action>
  </widget>

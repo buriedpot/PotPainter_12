@@ -67,10 +67,10 @@ private:
 private:
     void addAction(QVector<QAction*>& acts, int index, QIcon icon, const char text[] = "",
                    const char tooltip[] = "", const char statustip[] = "");
-    void inactActions(vector<QAction*>&);//Inactivate Actions.使图标可点击
+    void inactActions(QVector<QAction*>&);//Inactivate Actions.使图标可点击
     void inactTools(QToolBar *);
     void inactAction(QAction*);
-    void actActions(vector<QAction*>&);//Activate Actions.使图标不可点击
+    void actActions(QVector<QAction*>&);//Activate Actions.使图标不可点击
     void actTools(QToolBar *);
     void actAction(QAction*);
     void setTransChecked(bool);
@@ -80,6 +80,7 @@ Q_SIGNALS:
     void emitWidth(int);
 private slots:
     void on_resetcanvas_triggered();
+    void resizecanvas();
     void toolbarChecked(int, QVector<QAction*>& acts);
     void choosePencil();
     void chooseLine();

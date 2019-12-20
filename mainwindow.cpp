@@ -93,7 +93,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(transActions[ADJUST], &QAction::triggered, ui->canvas, &Canvas::chooseAdjust);
     //connect(ui->canvas, &Canvas::settransEnabled, this->transbar, &QToolBar::setEnabled);
 
-    toolbar = this->addToolBar(tr("画图"));
+    toolbar = this->addToolBar(tr("图形绘制"));
     toolbar->addAction(drawActions[PENCIL]);
     toolbar->addAction(drawActions[LINE]);
     toolbar->addAction(drawActions[ELLIPSE]);
@@ -104,7 +104,7 @@ MainWindow::MainWindow(QWidget *parent) :
     toolbar->addAction(drawActions[BSPLINE]);
     //toolbar->addAction()
     this->addToolBarBreak();
-    transbar = this->addToolBar(tr("变换"));
+    transbar = this->addToolBar(tr("图元变换"));
     //transbar->setOrientation(Qt::Vertical);
     transbar->addAction(transActions[TRANSLATE]);
     transbar->addAction(transActions[ROTATE]);
@@ -122,15 +122,15 @@ MainWindow::MainWindow(QWidget *parent) :
     transActions[SCALE]->setEnabled(0);
     transActions[CLIP]->setEnabled(0);
     transActions[ADJUST]->setEnabled(0);
-    setbar = this->addToolBar(tr("设置画笔"));
+    setbar = this->addToolBar(tr("绘制选项"));
     setbar->addAction(setcolor);
     setbar->addWidget(penwidthScroll);
     setbar->addWidget(new QLabel("曲线控制点数", this));
     nCurveBox = new QSpinBox(this);
-    nCurveBox->setRange(2, 15);
+    nCurveBox->setRange(2, 20);
     nCurveBox->setValue(4);
     kBSplineBox = new QSpinBox(this);
-    kBSplineBox->setRange(2, 5);
+    kBSplineBox->setRange(2, 6);
     kBSplineBox->setValue(4);
     connect(nCurveBox, static_cast<void(QSpinBox::*)(int)>(&QSpinBox::valueChanged), ui->canvas, &Canvas::setnCurve);
     connect(kBSplineBox, static_cast<void(QSpinBox::*)(int)>(&QSpinBox::valueChanged), ui->canvas, &Canvas::setkBSpline);
@@ -142,7 +142,7 @@ MainWindow::MainWindow(QWidget *parent) :
     //setbar->addWidget(new QLabel(tr("Bézier阶数"), this));
 
 
-
+    ui->clipalgorithm->setIcon(QIcon(":/icons/icons/clipalgorithm"));
     ui->impscript->setIcon(QIcon(":/icons/icons/script"));
     ui->menu_About->addAction(aboutAction);
     ui->resetcanvas->setIcon(QIcon(":/icons/icons/canvas"));
@@ -150,6 +150,8 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->savepic->setShortcuts(QKeySequence::Save);
     ui->savepic->setIcon(QIcon(":/icons/images/file-save"));
     ui->linealgorithm->setIcon(QIcon(":/icons/icons/linealgorithm"));
+    ui->resizecanvas->setIcon(QIcon(":/icons/icons/resizecanvas"));
+
 
     connect(ui->savepic, &QAction::triggered, this, &MainWindow::saveFile);
 
@@ -165,6 +167,9 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->canvas, &Canvas::setScaleEnabled, this->transActions[SCALE], &QAction::setEnabled);
     connect(ui->canvas, &Canvas::setClipEnabled, this->transActions[CLIP], &QAction::setEnabled);
     connect(ui->canvas, &Canvas::setAdjustEnabled, this->transActions[ADJUST], &QAction::setEnabled);
+    connect(ui->action_Barsky, &QAction::triggered, ui->canvas, &Canvas::chooseLiang_Barsky);
+    connect(ui->actionCohen_Sutherland, &QAction::triggered, ui->canvas, &Canvas::chooseCohen_Sutherland);
+    connect(ui->resizecanvas, &QAction::triggered, this, &MainWindow::resizecanvas);
     //ui->canvas->pixmap.scaled()
 }
 
@@ -216,7 +221,7 @@ void MainWindow::about()
 void MainWindow::actAction(QAction *action) {
     action->setEnabled(true);
 }
-void MainWindow::actActions(vector<QAction *> &acts) {
+void MainWindow::actActions(QVector<QAction *> &acts) {
     size_t length = acts.size();
     for (size_t i = 0; i < length; ++i) {
         acts[i]->setEnabled(true);
@@ -225,10 +230,10 @@ void MainWindow::actActions(vector<QAction *> &acts) {
 void MainWindow::inactAction(QAction *action) {
     action->setEnabled(false);
 }
-void MainWindow::inactActions(vector<QAction *> &acts) {
+void MainWindow::inactActions(QVector<QAction *> &acts) {
     size_t length = acts.size();
     for (size_t i = 0; i < length; ++i) {
-        acts[i]->setEnabled(false);
+        acts[i]->setChecked(false);
     }
 }
 void MainWindow::actTools(QToolBar *bar) {
@@ -251,7 +256,7 @@ void MainWindow::on_resetcanvas_triggered()
     tmpc->vb.clear();
     tmpc->graphseq.clear();
     ui->impscript->setEnabled(1);
-    transbar->setEnabled(false);
+    setTransEnabled(0);
     ResetCanvasDlg *dlg = new ResetCanvasDlg(this);
     dlg->setWindowTitle(tr("选择画布大小"));
     dlg->resize(600,400);
@@ -271,7 +276,27 @@ void MainWindow::on_resetcanvas_triggered()
         ui->canvas->penColor = Qt::black;
     }
 }
-
+void MainWindow::resizecanvas() {
+    ResetCanvasDlg *dlg = new ResetCanvasDlg(this);
+    dlg->setWindowTitle(tr("选择画布大小"));
+    dlg->resize(600,400);
+    int len, wid;
+    len = ui->canvas->size().width();
+    wid = ui->canvas->size().height();
+    /*把当前对话框中的宽度和高度设置为当前画布的宽度和高度*/
+    dlg->setlen(len);
+    dlg->setwid(wid);
+    if (dlg->exec() == 1) {
+        /*设置一下用来贴图的Widget组件*/
+        ui->canvas->resize(dlg->getlen(), dlg->getwid());
+        /*重置绘图设备pixmap*/
+        QPixmap tmpmap = ui->canvas->pixmap;
+        ui->canvas->pixmap = QPixmap(ui->canvas->size());
+        QPainter tmppainter(&ui->canvas->pixmap);
+        ui->canvas->pixmap.fill(Qt::white);
+        tmppainter.drawPixmap(0, 0, tmpmap);
+    }
+}
 void MainWindow::toolbarChecked(int c, QVector<QAction*>& acts) {
     for (int i = 0; i < acts.size(); ++i) {
         if (i != c) {
@@ -329,18 +354,23 @@ void MainWindow::chooseBresenham() {
 }
 void MainWindow::chooseTranslate() {
     toolbarChecked(TRANSLATE, transActions);
+    inactActions(drawActions);
 }
 void MainWindow::chooseRotate() {
     toolbarChecked(ROTATE, transActions);
+    inactActions(drawActions);
 }
 void MainWindow::chooseScale() {
     toolbarChecked(SCALE, transActions);
+    inactActions(drawActions);
 }
 void MainWindow::chooseClip() {
     toolbarChecked(CLIP, transActions);
+    inactActions(drawActions);
 }
 void MainWindow::chooseAdjust() {
     toolbarChecked(ADJUST, transActions);
+    inactActions(drawActions);
 }
 
 void MainWindow::openFile()
@@ -359,6 +389,16 @@ void MainWindow::openFile()
                 ui->canvas->pixmap.fill(Qt::white);
                 painter.drawPixmap(0, 0, tmppix);
                 ui->canvas->isSaved = true;
+                Canvas *tmpc = ui->canvas;
+                tmpc->isDrawing = false;
+                tmpc->Transforming = -1;
+                tmpc->isTransforming = 0;
+                tmpc->isBezierDrawDone = true;
+                tmpc->isPolygonDrawDone = true;
+                tmpc->vb.clear();
+                tmpc->graphseq.clear();
+                ui->impscript->setEnabled(1);
+                setTransEnabled(0);
                 update();
             }
             //textEdit->setText(in.readAll());
