@@ -8,6 +8,10 @@ Command::Command()
 Command::Command(QString picsavedir) {
     this->picsavedir = picsavedir.toStdString();
     if (this->picsavedir == "") this->picsavedir = ".";
+    QDir dir;
+    if (!dir.exists(picsavedir)) {
+        dir.mkpath(picsavedir);
+    }
 }
 
 string Command::lower(const string& str) {

@@ -141,7 +141,7 @@ void Canvas::paintEvent(QPaintEvent *event) {
                             else {
                                 this->BREDrawPolygon(&polygonmap, vb);
                             }
-                            emit setTranslateEnabled(1); emit setRotateEnabled(1); emit setScaleEnabled(1); emit setAdjustEnabled(1);
+                            emit setTranslateEnabled(1); emit setRotateEnabled(1); emit setScaleEnabled(1); emit setAdjustEnabled(1); emit setClipEnabled(1);
                             transmap = pixmap;
                             transpoints = vb;
                             pixmap = polygonmap;
@@ -153,7 +153,7 @@ void Canvas::paintEvent(QPaintEvent *event) {
                         else {
                             //qDebug() << "end = first" << endl;
                             ETFillPolygon(&polygonmap, vb);
-                            emit setTranslateEnabled(1); emit setRotateEnabled(1); emit setScaleEnabled(1);emit setAdjustEnabled(1);
+                            emit setTranslateEnabled(1); emit setRotateEnabled(1); emit setScaleEnabled(1);emit setAdjustEnabled(1); emit setClipEnabled(1);
                             transpoints = vb;
                             transmap = pixmap;
                             pixmap = polygonmap;
@@ -371,6 +371,20 @@ void Canvas::paintEvent(QPaintEvent *event) {
                     BREDrawLine(&pixmap, x00, y00, x00 + ddx, y00 + ddy);
                     isClipped = true;
                 }
+                else if ((graphClass == POLYGON || graphClass == FILLPOLYGON) && isClipped == false) {
+                    Sutherland_Hodgeman(transpoints, startPoint, endPoint);
+                    setSurround(transpoints);
+                    if (graphClass == POLYGON) {
+                        if (lineClass == DDALINE) {
+                            DDADrawPolygon(&pixmap, transpoints);
+                        }
+                        else BREDrawPolygon(&pixmap, transpoints);
+                    }
+                    else {
+                        ETFillPolygon(&pixmap, transpoints);
+                    }
+                    isClipped = true;
+                }
                 else pixmap = originmap;
             }
             else if (Transforming == ADJUST) {
@@ -514,7 +528,7 @@ void Canvas::mouseReleaseEvent(QMouseEvent *event) {
     if (event->button() == Qt::LeftButton) {
         endPoint = event->pos();
         if (Transforming != -1) {
-            if (Transforming == CLIP && graphClass == LINE) isClipped = false;
+            if (Transforming == CLIP) isClipped = false;
             isTransforming = false;
             AdjustNode = -1;
             update();
@@ -855,11 +869,13 @@ void Canvas::BREDrawPolygon(QPixmap *map, const vector<Point> &v) {
     for (int i = 0; i < pointnum; ++i) {
         BREDrawLine(map, (int)v[i].xp, (int)v[i].yp, (int)v[(i + 1) % pointnum].xp, \
                 (int)v[(i + 1) % pointnum].yp);
+
     }
 }
 
 /*多边形扫描转换填充*/
 void Canvas::ETFillPolygon(QPixmap *map, const vector<QPoint> &v) {
+    if (v.size() <= 0) return;
     QPainter painter(map);
     QPen pen;
     pen.setWidth(1);
@@ -868,33 +884,41 @@ void Canvas::ETFillPolygon(QPixmap *map, const vector<QPoint> &v) {
     painter.setPen(pen);
     int pointnum = v.size();//Numbers of points of Polygon
     int ymax = -1, ymin = 2147483647;
+    /*循环遍历顶点，找到最低扫描线和最高扫描线*/
     for (unsigned int i = 0; i < v.size(); ++i) {
         if (v[i].y() > ymax) ymax = v[i].y();
         if (v[i].y() < ymin) ymin = v[i].y();
     }
-    vector<vector<ETunit>> NET;
-    NET.resize(ymax - ymin + 1);
+    vector<vector<ETunit>> NET;//建立有序边表
+    NET.resize(ymax - ymin + 1);//ymax-ymin+1条扫描线
     /*create NET*/
     for (int i = 0; i < v.size(); ++i) {
         QPoint front = v[(i - 1 + pointnum) % pointnum], current = v[i], next = v[(i + 1) % pointnum]\
-                , nenext = v[(i + 2) % pointnum];
+                , nenext = v[(i + 2) % pointnum];//前一个，当前的点，下一个点，下下个点。
+        /*
+         * 要处理的是当前点和下一个点连接而成的线段
+         * 这里缩边缩的都是下面的线段
+         */
+
         ETunit tmp;
+        //当前点比较高，是一个从左下到右上的线段
         if (next.y() > current.y()) {
             tmp.x = current.x();//设置最低点x值
-            tmp.ymax = next.y();
-            tmp.k_1 = (double)(next.x() - current.x()) \
+            tmp.ymax = next.y();//最高点y值
+            tmp.k_1 = (double)(next.x() - current.x()) //求k的倒数
                     / (next.y() - current.y());
             if (nenext.y() > next.y()) {
                 --tmp.ymax;//缩边
             }
             NET[current.y() - ymin].push_back(tmp);
         }
+        //当前点比较低，是一个从左上到右下的线段
         else if (next.y() < current.y()) {
             tmp.x = next.x();
             tmp.ymax = current.y();
-            tmp.k_1 = (double)(next.x() - current.x()) \
+            tmp.k_1 = (double)(next.x() - current.x())
                     / (next.y() - current.y());
-            if (front.y() > current.y()) {
+            if (front.y() > current.y()) {//因为缩边缩的都是较低的线段，所以与前面的去比，不与后面的比。反之就要与后边的比
                 --tmp.ymax;
             }
             NET[next.y() - ymin].push_back(tmp);
@@ -1067,7 +1091,8 @@ double Canvas::N(int i, int k, double u) {
 void Canvas::BSplineDrawCurve(QPixmap *map, vector<Point> &v, int k){
     vector<Point> curve;
     //qDebug() << "fuck" << v.size();
-    for(double u = (double)k - 1; u < v.size(); u += 0.001) {
+    double du = 1 / 512.0;
+    for(double u = (double)k - 1; u < v.size(); u += du) {
         //qDebug() << "fuck";
         Point tmp(0, 0);
         for(int i = 0; i < v.size(); ++i) {
@@ -1338,6 +1363,89 @@ int Canvas::Liang_Barsky(QPoint &p1, QPoint& p2,
         p2.setY(static_cast<int>(y1 + u2 * (y2 - y1)));
         return 1;
     }
+}
+/*多边形裁剪Sutherland-Hodgeman算法*/
+void Canvas::Sutherland_Hodgeman(vector<QPoint> &points, const QPoint& w1, const QPoint& w2) {
+    int wxl = min(w1.x(), w2.x()), wxr = max(w1.x(), w2.x()),
+            wyb = min(w1.y(), w2.y()), wyt = max(w1.y(), w2.y());
+    /*vector<int> clipLines;
+    clipLines.push_back(wxl);clipLines.push_back(wyb);clipLines.push_back(wxr);clipLines.push_back(wyt);*/
+    vector<QPoint> tmp = points;
+    vector<QPoint> result;
+    int len = tmp.size();
+    for (int j = 0; j < tmp.size(); ++j) {
+        if (tmp[j].x() < wxl && tmp[(j + 1) % len].x() >= wxl) {
+            int y = (double)(tmp[(j+1)%len].y() - tmp[j].y())/(tmp[(j+1)%len].x() - tmp[j].x())*(wxl-tmp[j].x())+tmp[j].y();
+            result.push_back(QPoint(wxl, y));
+            result.push_back(tmp[(j + 1)%len]);
+        }
+        else if (tmp[j].x() >= wxl && tmp[(j+1)%len].x() >= wxl) {
+            result.push_back(tmp[(j+1)%len]);
+        }
+        else if (tmp[j].x() >= wxl && tmp[(j + 1)%len].x() < wxl) {
+            int y = (double)(tmp[(j+1)%len].y() - tmp[j].y())/(tmp[(j+1)%len].x() - tmp[j].x())*(wxl-tmp[j].x())+tmp[j].y();
+            result.push_back(QPoint(wxl, y));
+        }
+    }
+    tmp=result; len = tmp.size(); result.clear();
+    for (int j = 0; j < tmp.size(); ++j) {
+        if (tmp[j].y() < wyb && tmp[(j + 1) % len].y() >= wyb) {
+            int x = (double)(tmp[(j+1)%len].x() - tmp[j].x())/(tmp[(j+1)%len].y() - tmp[j].y())*(wyb-tmp[j].y())+tmp[j].x();
+            result.push_back(QPoint(x, wyb));
+            result.push_back(tmp[(j + 1)%len]);
+        }
+        else if (tmp[j].y() >= wyb && tmp[(j+1)%len].y() >= wyb) {
+            result.push_back(tmp[(j+1)%len]);
+        }
+        else if (tmp[j].y() >= wyb && tmp[(j + 1)%len].y() < wyb) {
+            int x = (double)(tmp[(j+1)%len].x() - tmp[j].x())/(tmp[(j+1)%len].y() - tmp[j].y())*(wyb-tmp[j].y())+tmp[j].x();
+            result.push_back(QPoint(x, wyb));
+        }
+    }
+    tmp=result; len = tmp.size(); result.clear();
+    for (int j = 0; j < tmp.size(); ++j) {
+        if (tmp[j].x() > wxr && tmp[(j + 1) % len].x() <= wxr) {
+            int y = (double)(tmp[(j+1)%len].y() - tmp[j].y())/(tmp[(j+1)%len].x() - tmp[j].x())*(wxr-tmp[j].x())+tmp[j].y();
+            result.push_back(QPoint(wxr, y));
+            result.push_back(tmp[(j + 1)%len]);
+        }
+        else if (tmp[j].x() <= wxr && tmp[(j+1)%len].x() <= wxr) {
+            result.push_back(tmp[(j+1)%len]);
+        }
+        else if (tmp[j].x() <= wxr && tmp[(j + 1)%len].x() > wxr) {
+            int y = (double)(tmp[(j+1)%len].y() - tmp[j].y())/(tmp[(j+1)%len].x() - tmp[j].x())*(wxr-tmp[j].x())+tmp[j].y();
+            result.push_back(QPoint(wxr, y));
+        }
+    }
+    tmp=result; len = tmp.size(); result.clear();
+    for (int j = 0; j < tmp.size(); ++j) {
+        if (tmp[j].y() > wyt && tmp[(j + 1) % len].y() <= wyt) {
+            int x = (double)(tmp[(j+1)%len].x() - tmp[j].x())/(tmp[(j+1)%len].y() - tmp[j].y())*(wyt-tmp[j].y())+tmp[j].x();
+            result.push_back(QPoint(x, wyt));
+            result.push_back(tmp[(j + 1)%len]);
+        }
+        else if (tmp[j].y() <= wyt && tmp[(j+1)%len].y() <= wyt) {
+            result.push_back(tmp[(j+1)%len]);
+        }
+        else if (tmp[j].y() <= wyt && tmp[(j + 1)%len].y() > wyt) {
+            int x = (double)(tmp[(j+1)%len].x() - tmp[j].x())/(tmp[(j+1)%len].y() - tmp[j].y())*(wyt-tmp[j].y())+tmp[j].x();
+            result.push_back(QPoint(x, wyt));
+        }
+    }
+    points = result;
+    cout << "haha" << points.size();
+}
+void Canvas::Sutherland_Hodgeman(vector<Point> &points, const QPoint &w1, const QPoint &w2) {
+    vector<QPoint> ps;
+    for (int i = 0; i < points.size(); ++i) {
+        ps.push_back(QPoint(points[i].xp, points[i].yp));
+    }
+    Sutherland_Hodgeman(ps, w1, w2);
+    points.clear();
+    for (int i = 0; i < ps.size(); ++i) {
+        points.push_back(ps[i]);
+    }
+    qDebug() << "XIIX";
 }
 /*贝塞尔曲线*/
 void Canvas::BezierDrawCurve(QPixmap *map, vector<QPoint>& points) {

@@ -14,7 +14,8 @@ int main(int argc, char *argv[])
     MainWindow w;
     cout << argc << endl;
     if (argc == 2) {
-        cout << "hello world!" << endl;
+        cout << "Please enter three parameters" << endl;
+        return 0;
         //TODO command string control part
         /*
          * import script
@@ -56,6 +57,7 @@ int main(int argc, char *argv[])
             //canvas->update();
             if (operate == -1) cout << "Invalid Command!" << endl;
         }
+        return 0;
     }
     else {
         w.show();

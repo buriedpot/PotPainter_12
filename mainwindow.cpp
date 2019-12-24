@@ -84,7 +84,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(transActions[SCALE], &QAction::triggered, this, &MainWindow::chooseScale);
     connect(transActions[SCALE], &QAction::triggered, ui->canvas, &Canvas::chooseScale);
 
-    addAction(transActions, CLIP, QIcon(":/icons/transicon/clip"), "裁剪", "对线段的裁剪", "鼠标按住拖动产生裁剪窗口，裁剪线段");
+    addAction(transActions, CLIP, QIcon(":/icons/transicon/clip"), "裁剪", "对线段或多边形的裁剪", "鼠标按住拖动产生裁剪窗口，裁剪线段或多边形");
     connect(transActions[CLIP], &QAction::triggered, this, &MainWindow::chooseClip);
     connect(transActions[CLIP], &QAction::triggered, ui->canvas, &Canvas::chooseClip);
 

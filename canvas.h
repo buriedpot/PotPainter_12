@@ -132,6 +132,8 @@ public:
                           const QPoint& w1, const QPoint& w2);
     int Liang_Barsky(QPoint &p1, QPoint& p2,
                              const QPoint& w1, const QPoint& w2);
+    void Sutherland_Hodgeman(vector<QPoint> &points, const QPoint& w1, const QPoint& w2);//多边形裁剪
+    void Sutherland_Hodgeman(vector<Point> &points, const QPoint& w1, const QPoint& w2);
     void BezierDrawCurve(QPixmap *map, vector<QPoint>& points);
     void BezierDrawCurve(QPixmap *map, vector<Point> & points);
 private:
