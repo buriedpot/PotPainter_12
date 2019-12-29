@@ -157,6 +157,9 @@ private:
     void translate(int &x, int &y, int dx, int dy);
     void translate(long long int &x, long long int &y, int dx, int dy);
     void translate(QPoint &p, qreal dx, qreal dy);
+    void translate(double &x, double &y, int dx, int dy) {
+        x += dx; y += dy;
+    }
     void rotate(QPoint &p, const QPoint& center, qreal angle);
     void rotate(int &x, int &y, const QPoint& center, qreal angle);
     void rotate(double &x, double &y, const QPoint& center, qreal angle);

@@ -200,10 +200,16 @@ int Command::cmdAnalyze(string cmd, Canvas& canvas, QFile& fin) {
                 canvas.translate(((Polygon*)(it->g))->v[i], dx, dy);
             }
         }
-        else if (it->graphclass == BEZIERCURVE || it->graphclass == BSPLINECURVE) {
+        else if (it->graphclass == BEZIERCURVE) {
             int length = ((BezierCurve*)(it->g))->v.size();
             for (int i = 0; i < length; ++i) {
                 canvas.translate(((BezierCurve*)(it->g))->v[i], dx, dy);
+            }
+        }
+        else if (it->graphclass == BSPLINECURVE) {
+            int length = ((B_SplineCurve*)(it->g))->v.size();
+            for (int i = 0; i < length; ++i) {
+                canvas.translate(((B_SplineCurve*)(it->g))->v[i], dx, dy);
             }
         }
         canvas.redraw();
@@ -235,10 +241,16 @@ int Command::cmdAnalyze(string cmd, Canvas& canvas, QFile& fin) {
                 canvas.rotate(((Polygon*)(it->g))->v[i], center, (double)r);
             }
         }
-        else if (it->graphclass == BEZIERCURVE || it->graphclass == BSPLINECURVE) {
+        else if (it->graphclass == BEZIERCURVE) {
             int length = ((BezierCurve*)(it->g))->v.size();
             for (int i = 0; i < length; ++i) {
                 canvas.rotate(((BezierCurve*)(it->g))->v[i], center, (double)r);
+            }
+        }
+        else if (it->graphclass == BSPLINECURVE) {
+            int length = ((B_SplineCurve*)(it->g))->v.size();
+            for (int i = 0; i < length; ++i) {
+                canvas.rotate(((B_SplineCurve*)(it->g))->v[i], center, (double)r);
             }
         }
         canvas.redraw();

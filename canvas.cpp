@@ -1670,6 +1670,7 @@ void Canvas::setSurround(const vector<Point> &v) {
 void Canvas::redraw() {
     pixmap.fill(Qt::white);
     QColor tmpcolor = penColor;
+    qDebug() << "redrawredraw";
     /*计数*/
     for (int i = 0; i < graphseq.size(); ++i) {
         if (graphseq[i].graphclass == DDALINE) {
@@ -1706,16 +1707,17 @@ void Canvas::redraw() {
         else if (graphseq[i].graphclass == BEZIERCURVE) {
             penColor = ((BezierCurve*)graphseq[i].g)->penColor;
             vector<Point> v;
-            for (int i = 0; i < ((BezierCurve*)graphseq[i].g)->v.size(); ++i) {
-                v.push_back(((BezierCurve*)graphseq[i].g)->v[i]);
+            for (int j = 0; j < ((BezierCurve*)graphseq[i].g)->v.size(); ++j) {
+                //qDebug() << "bezier" << i << ',' << ((BezierCurve*)graphseq[i].g)->v[i];
+                v.push_back({(double)((BezierCurve*)graphseq[i].g)->v[j].x(), (double)((BezierCurve*)graphseq[i].g)->v[j].y()});
             }
             BezierDrawCurve(&pixmap, v);
         }
         else if (graphseq[i].graphclass == BSPLINECURVE) {
             penColor = ((B_SplineCurve*)graphseq[i].g)->penColor;
             vector<Point> v;
-            for (int i = 0; i < ((B_SplineCurve*)graphseq[i].g)->v.size(); ++i) {
-                v.push_back(((B_SplineCurve*)graphseq[i].g)->v[i]);
+            for (int j = 0; j < ((B_SplineCurve*)graphseq[i].g)->v.size(); ++j) {
+                v.push_back({(double)((B_SplineCurve*)graphseq[i].g)->v[j].x(), (double)((B_SplineCurve*)graphseq[i].g)->v[j].y()});
             }
             BSplineDrawCurve(&pixmap, v, 4);//4阶3次B样条
         }
